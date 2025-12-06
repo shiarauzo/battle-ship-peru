@@ -19,6 +19,7 @@ interface Shot {
   col: number
   hit: boolean
   player: 1 | 2
+  confidence: number
 }
 
 interface BattleFieldProps {
@@ -135,7 +136,10 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
 
       const hit = targetShips.some((ship) => ship.cells.some((cell) => cell.row === row && cell.col === col))
 
-      const newShot: Shot = { row, col, hit, player: currentPlayer }
+      // Calculate confidence for this shot
+      const confidence = calculateConfidence(row, col, currentShots, targetShips)
+
+      const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
 
       if (currentPlayer === 1) {
         const newShots = [...shots1, newShot]
@@ -180,6 +184,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
                   {COLUMNS[shot.col]}
                   {shot.row + 1}
                 </Badge>
+                <span className="text-[9px] text-primary/80 font-mono">{shot.confidence}%</span>
               </div>
               <Badge
                 variant={shot.hit ? "default" : "secondary"}
@@ -193,6 +198,24 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
       </div>
     </ScrollArea>
   )
+
+  // Function to calculate confidence based on AI strategy
+  const calculateConfidence = (row: number, col: number, currentShots: Shot[], targetShips: Ship[]): number => {
+    let confidence = 45 + Math.random() * 30 // Base: 45-75%
+
+    // Increase confidence if near previous hits
+    const nearbyHits = currentShots.filter((s) => s.hit && Math.abs(s.row - row) <= 1 && Math.abs(s.col - col) <= 1)
+    confidence += nearbyHits.length * 15
+
+    // Increase confidence for center positions (more likely to have ships)
+    const distanceFromCenter = Math.abs(row - 3.5) + Math.abs(col - 3.5)
+    if (distanceFromCenter < 3) {
+      confidence += 10
+    }
+
+    // Cap at 98%
+    return Math.min(98, Math.round(confidence))
+  }
 
   return (
     <div className="min-h-screen p-8 monitor-frame">
