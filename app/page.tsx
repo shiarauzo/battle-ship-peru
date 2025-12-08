@@ -17,12 +17,12 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="container mx-auto py-8">
       {!gameStarted ? (
         <AISelector onStart={handleStartGame} />
       ) : (
         <BattleField aiModel1={aiModel1} aiModel2={aiModel2} />
       )}
-    </main>
+    </div>
   )
 }
