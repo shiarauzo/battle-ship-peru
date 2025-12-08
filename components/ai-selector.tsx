@@ -60,7 +60,7 @@ export function AISelector({ onStart }: AISelectorProps) {
           <div className="space-y-2">
             <label className="text-xs font-semibold text-primary uppercase tracking-wide">&gt; PLAYER_01 - AI</label>
             <Select value={model1} onValueChange={setModel1}>
-              <SelectTrigger className="w-full border-primary/30">
+              <SelectTrigger className="w-full border-primary/30" onClickSound={true}>
                 <SelectValue placeholder="SELECT MODEL" />
               </SelectTrigger>
               <SelectContent>
@@ -79,7 +79,7 @@ export function AISelector({ onStart }: AISelectorProps) {
           <div className="space-y-2">
             <label className="text-xs font-semibold text-primary uppercase tracking-wide">&gt; PLAYER_02 - AI</label>
             <Select value={model2} onValueChange={setModel2}>
-              <SelectTrigger className="w-full border-primary/30">
+              <SelectTrigger className="w-full border-primary/30" onClickSound={true}>
                 <SelectValue placeholder="SELECT MODEL" />
               </SelectTrigger>
               <SelectContent>
@@ -97,6 +97,7 @@ export function AISelector({ onStart }: AISelectorProps) {
 
           <Button
             onClick={handleStart}
+            onClickSound={true}
             disabled={!model1 || !model2}
             className="w-full h-11 text-sm font-bold uppercase tracking-wider"
           >

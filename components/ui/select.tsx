@@ -5,6 +5,7 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useSound } from "@/hooks/useSound"
 
 function Select({
   ...props
@@ -28,10 +29,23 @@ function SelectTrigger({
   className,
   size = "default",
   children,
+  onClickSound = false,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default"
+  onClickSound?: boolean
 }) {
+  const { play } = useSound('/sounds/click.mp3')
+  
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (onClickSound) {
+      play()
+    }
+    if (props.onClick) {
+      props.onClick(e)
+    }
+  }
+
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
@@ -41,6 +55,7 @@ function SelectTrigger({
         className
       )}
       {...props}
+      onClick={handleClick}
     >
       {children}
       <SelectPrimitive.Icon asChild>

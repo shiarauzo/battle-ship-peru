@@ -1,20 +1,19 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 
 export const useSound = (soundPath: string) => {
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   
   useEffect(() => {
-    const audioElement = new Audio(soundPath)
-    audioElement.volume = 0.3 // 30% volume as requested
-    setAudio(audioElement)
+    audioRef.current = new Audio(soundPath)
+    audioRef.current.volume = 0.3 // 30% volume as requested
   }, [soundPath])
   
   const play = useCallback(() => {
-    if (audio) {
-      audio.currentTime = 0
-      audio.play().catch(console.error)
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+      audioRef.current.play().catch(console.error)
     }
-  }, [audio])
+  }, [])
   
   return { play }
 }
