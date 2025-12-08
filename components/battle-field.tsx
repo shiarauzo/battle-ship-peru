@@ -5,7 +5,7 @@ import { Grid } from "@/components/grid"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Trophy, Target } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { AutoScrollArea } from "@/components/ui/auto-scroll-area"
 
 interface Ship {
   id: number
@@ -199,7 +199,12 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
   const updatedShips2 = updateSunkShips(ships2, shots1)
 
   const renderShotLog = (shots: Shot[], aiModel: string) => (
-    <ScrollArea className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50">
+    <AutoScrollArea 
+      className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50"
+      scrollDependencies={[shots]}
+      scrollBehavior="smooth"
+      scrollDelay={50}
+    >
       <div className="space-y-1">
         {shots.length === 0 ? (
           <p className="text-center text-muted-foreground text-xs py-2">ESPERANDO...</p>
@@ -224,7 +229,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
           ))
         )}
       </div>
-    </ScrollArea>
+    </AutoScrollArea>
   )
 
 
