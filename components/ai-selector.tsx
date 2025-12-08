@@ -7,10 +7,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Brain } from "lucide-react"
 
 const AI_MODELS = [
-  { id: "gpt-4", name: "GPT-4", description: "Advanced strategy and deep analysis" },
-  { id: "claude", name: "Claude", description: "Structured tactical thinking" },
-  { id: "gemini", name: "Gemini", description: "Optimized pattern prediction" },
-  { id: "llama", name: "Llama", description: "Fast adaptive learning" },
+  // OpenAI Models
+  { id: "openai/gpt-4.1-mini", name: "GPT-4.1 Mini", description: "Balanced performance with 1M context" },
+  { id: "openai/gpt-5-mini", name: "GPT-5 Mini", description: "Latest OpenAI model with 400K context" },
+  
+  // Anthropic Models  
+  { id: "anthropic/claude-sonnet-4.5", name: "Claude Sonnet 4.5", description: "Advanced reasoning with 200K context" },
+  { id: "anthropic/claude-haiku-4.5", name: "Claude Haiku 4.5", description: "Fast responses with 200K context" },
+  { id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", description: "Powerful analysis with 200K context" },
+  
+  // Google Models
+  { id: "google/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash", description: "Ultra-fast with 1M context" },
+  { id: "google/gemini-3-pro-preview", name: "Gemini 3 Pro", description: "Advanced capabilities with 1M context" },
+  
+  // xAI Models
+  { id: "xai/grok-code-fast-1", name: "Grok Code Fast", description: "Code-optimized strategy with 256K context" },
+  { id: "xai/grok-4-fast-reasoning", name: "Grok 4 Fast", description: "Strategic reasoning with 2M context" },
+  
+  // Additional Model
+  { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", description: "Balanced performance with 200K context" },
 ]
 
 interface AISelectorProps {
@@ -45,7 +60,7 @@ export function AISelector({ onStart }: AISelectorProps) {
           <div className="space-y-2">
             <label className="text-xs font-semibold text-primary uppercase tracking-wide">&gt; PLAYER_01 - AI</label>
             <Select value={model1} onValueChange={setModel1}>
-              <SelectTrigger className="w-full border-primary/30">
+              <SelectTrigger className="w-full border-primary/30" onClickSound={true}>
                 <SelectValue placeholder="SELECT MODEL" />
               </SelectTrigger>
               <SelectContent>
@@ -64,7 +79,7 @@ export function AISelector({ onStart }: AISelectorProps) {
           <div className="space-y-2">
             <label className="text-xs font-semibold text-primary uppercase tracking-wide">&gt; PLAYER_02 - AI</label>
             <Select value={model2} onValueChange={setModel2}>
-              <SelectTrigger className="w-full border-primary/30">
+              <SelectTrigger className="w-full border-primary/30" onClickSound={true}>
                 <SelectValue placeholder="SELECT MODEL" />
               </SelectTrigger>
               <SelectContent>
@@ -82,6 +97,7 @@ export function AISelector({ onStart }: AISelectorProps) {
 
           <Button
             onClick={handleStart}
+            onClickSound={true}
             disabled={!model1 || !model2}
             className="w-full h-11 text-sm font-bold uppercase tracking-wider"
           >
