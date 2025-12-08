@@ -13,10 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-
-  title: "IA Battle ship game",
-  description: "Videogame created for AI Gateway Hackathon",
-};
+ 
+  title: "Battleship Game",
+  description: "AI-powered naval combat simulator where different AI models compete in strategic battles with real-time statistics and performance tracking",
+ };
 
 export default function RootLayout({
   children,

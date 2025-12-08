@@ -19,6 +19,7 @@ interface Shot {
   col: number
   hit: boolean
   player: 1 | 2
+  confidence: number
 }
 
 interface BattleFieldProps {
@@ -55,7 +56,7 @@ const generateShips = (): Ship[] => {
       if (horizontal && col + size > 8) continue
       if (!horizontal && row + size > 8) continue
 
-      // Check if cells are free
+      // Verificar si las celdas están libres
       const cells: { row: number; col: number }[] = []
       let canPlace = true
 
@@ -135,7 +136,10 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
 
       const hit = targetShips.some((ship) => ship.cells.some((cell) => cell.row === row && cell.col === col))
 
-      const newShot: Shot = { row, col, hit, player: currentPlayer }
+      // Calculate confidence for this shot
+      const confidence = calculateConfidence(row, col, currentShots, targetShips)
+
+      const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
 
       if (currentPlayer === 1) {
         const newShots = [...shots1, newShot]
@@ -166,11 +170,11 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
   const updatedShips1 = updateSunkShips(ships1, shots2)
   const updatedShips2 = updateSunkShips(ships2, shots1)
 
-  const renderShotLog = (shots: Shot[]) => (
+  const renderShotLog = (shots: Shot[], aiModel: string) => (
     <ScrollArea className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50">
       <div className="space-y-1">
         {shots.length === 0 ? (
-          <p className="text-center text-muted-foreground text-xs py-2">WAITING...</p>
+          <p className="text-center text-muted-foreground text-xs py-2">ESPERANDO...</p>
         ) : (
           shots.map((shot, index) => (
             <div key={index} className="flex items-center justify-between p-1.5 rounded bg-muted/30 text-xs">
@@ -195,17 +199,33 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
     </ScrollArea>
   )
 
+  // Function to calculate confidence based on AI strategy
+  const calculateConfidence = (row: number, col: number, currentShots: Shot[], targetShips: Ship[]): number => {
+    let confidence = 45 + Math.random() * 30 // Base: 45-75%
 
+    // Increase confidence if near previous hits
+    const nearbyHits = currentShots.filter((s) => s.hit && Math.abs(s.row - row) <= 1 && Math.abs(s.col - col) <= 1)
+    confidence += nearbyHits.length * 15
+
+    // Increase confidence for center positions (more likely to have ships)
+    const distanceFromCenter = Math.abs(row - 3.5) + Math.abs(col - 3.5)
+    if (distanceFromCenter < 3) {
+      confidence += 10
+    }
+
+    // Cap at 98%
+    return Math.min(98, Math.round(confidence))
+  }
 
   return (
     <div className="min-h-screen p-8 monitor-frame">
       <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <div className="text-center space-y-1">
-<h1 className="text-3xl md:text-4xl font-bold text-balance text-glow uppercase tracking-wider">
-            [ BATTLESHIP AI ]
+          <h1 className="text-3xl md:text-4xl font-bold text-balance text-glow uppercase tracking-wider">
+            [ BATALLA NAVAL IA ]
           </h1>
-          <p className="text-muted-foreground text-sm uppercase tracking-wide">Terminal Combat System v2.0</p>
+          <p className="text-muted-foreground text-sm uppercase tracking-wide">Sistema de Combate Terminal v2.0</p>
         </div>
 
         {/* Winner Banner */}
@@ -214,7 +234,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
             <div className="flex items-center justify-center gap-3">
               <Trophy className="h-6 w-6" />
               <h2 className="text-xl font-bold text-glow uppercase">
-                &gt;&gt; {winner === 1 ? aiModel1 : aiModel2} VICTORY &lt;&lt;
+                &gt;&gt; {winner === 1 ? aiModel1 : aiModel2} VICTORIA &lt;&lt;
               </h2>
               <Trophy className="h-6 w-6" />
             </div>
@@ -232,15 +252,15 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
                   {currentPlayer === 1 && !gameOver && (
                     <Badge variant="default" className="animate-pulse text-[10px] px-1 py-0">
                       <Target className="h-2 w-2 mr-1" />
-                      ACTIVE
+                      ACTIVO
                     </Badge>
                   )}
                 </h2>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">PLAYER_01</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">JUGADOR_01</p>
               </div>
               <div className="text-right">
                 <div className="text-xl font-bold text-glow">{calculateAccuracy(shots1)}%</div>
-                <div className="text-[9px] text-muted-foreground uppercase">ACCURACY</div>
+                <div className="text-[9px] text-muted-foreground uppercase">PRECISION</div>
               </div>
             </div>
             <div className="flex justify-center">
@@ -251,20 +271,20 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
                 <div className="flex items-center gap-1.5">
                   <div className="h-3 w-3 rounded bg-hit" />
                   <span>
-                    HITS: {shots1.filter((s) => s.hit).length}/{getTotalShipCells(ships2)}
+                    IMPACTOS: {shots1.filter((s) => s.hit).length}/{getTotalShipCells(ships2)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-3 w-3 rounded bg-miss" />
-                  <span>MISSES: {shots1.filter((s) => !s.hit).length}</span>
+                  <span>FALLOS: {shots1.filter((s) => !s.hit).length}</span>
                 </div>
               </div>
               <div className="text-[10px] text-muted-foreground uppercase">
-                SHIPS SUNK: {updatedShips2.filter((s) => s.sunk).length}/5
+                BARCOS HUNDIDOS: {updatedShips2.filter((s) => s.sunk).length}/5
               </div>
               <div className="pt-1">
                 <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-primary">
-                  &gt; SHOT LOG
+                  &gt; REGISTRO DE DISPAROS
                 </h3>
                 {renderShotLog(shots1, aiModel1)}
               </div>
@@ -280,15 +300,15 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
                   {currentPlayer === 2 && !gameOver && (
                     <Badge variant="default" className="animate-pulse text-[10px] px-1 py-0">
                       <Target className="h-2 w-2 mr-1" />
-                      ACTIVE
+                      ACTIVO
                     </Badge>
                   )}
                 </h2>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">PLAYER_02</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">JUGADOR_02</p>
               </div>
               <div className="text-right">
                 <div className="text-xl font-bold text-glow">{calculateAccuracy(shots2)}%</div>
-                <div className="text-[9px] text-muted-foreground uppercase">ACCURACY</div>
+                <div className="text-[9px] text-muted-foreground uppercase">PRECISION</div>
               </div>
             </div>
             <div className="flex justify-center">
@@ -299,20 +319,20 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
                 <div className="flex items-center gap-1.5">
                   <div className="h-3 w-3 rounded bg-hit" />
                   <span>
-                    HITS: {shots2.filter((s) => s.hit).length}/{getTotalShipCells(ships1)}
+                    IMPACTOS: {shots2.filter((s) => s.hit).length}/{getTotalShipCells(ships1)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-3 w-3 rounded bg-miss" />
-                  <span>MISSES: {shots2.filter((s) => !s.hit).length}</span>
+                  <span>FALLOS: {shots2.filter((s) => !s.hit).length}</span>
                 </div>
               </div>
               <div className="text-[10px] text-muted-foreground uppercase">
-                SHIPS SUNK: {updatedShips1.filter((s) => s.sunk).length}/5
+                BARCOS HUNDIDOS: {updatedShips1.filter((s) => s.sunk).length}/5
               </div>
               <div className="pt-1">
                 <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-primary">
-                  &gt; SHOT LOG
+                  &gt; REGISTRO DE DISPAROS
                 </h3>
                 {renderShotLog(shots2, aiModel2)}
               </div>
