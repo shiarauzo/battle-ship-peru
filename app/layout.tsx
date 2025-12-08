@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 
   title: "IA Battle ship game",
   description: "Videogame created for AI Gateway Hackathon",
+
 };
 
 export default function RootLayout({
