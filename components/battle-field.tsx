@@ -52,11 +52,10 @@ const generateShips = (): Ship[] => {
       const row = Math.floor(Math.random() * 8)
       const col = Math.floor(Math.random() * 8)
 
-      // Verificar si el barco cabe
       if (horizontal && col + size > 8) continue
       if (!horizontal && row + size > 8) continue
 
-      // Verificar si las celdas están libres
+
       const cells: { row: number; col: number }[] = []
       let canPlace = true
 
@@ -88,6 +87,8 @@ const generateShips = (): Ship[] => {
   return ships
 }
 
+
+
 export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
   const [ships1] = useState<Ship[]>(generateShips())
   const [ships2] = useState<Ship[]>(generateShips())
@@ -106,7 +107,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
     })
   }
 
-  // Calcular accuracy
+
   const calculateAccuracy = (shots: Shot[]) => {
     if (shots.length === 0) return 0
     const hits = shots.filter((s) => s.hit).length
@@ -116,8 +117,29 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
   const getTotalShipCells = (ships: Ship[]) => {
     return ships.reduce((total, ship) => total + ship.cells.length, 0)
   }
+  const saveBattle = async () => {
+    await fetch("/api/save-battle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        modelA: aiModel1,
+        modelB: aiModel2,
 
-  // IA hace un disparo
+        accuracyA: calculateAccuracy(shots1),
+        accuracyB: calculateAccuracy(shots2),
+
+        hitsA: shots1.filter(s => s.hit).length,
+        hitsB: shots2.filter(s => s.hit).length,
+
+        missesA: shots1.filter(s => !s.hit).length,
+        missesB: shots2.filter(s => !s.hit).length,
+
+        winner: winner === 1 ? aiModel1 : aiModel2
+      })
+    });
+  };
+
+
   useEffect(() => {
     if (gameOver) return
 
@@ -125,7 +147,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
       const targetShips = currentPlayer === 1 ? ships2 : ships1
       const currentShots = currentPlayer === 1 ? shots1 : shots2
 
-      // IA inteligente: evita repetir disparos
+      
       let row: number, col: number
       let attempts = 0
       do {
@@ -136,7 +158,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
 
       const hit = targetShips.some((ship) => ship.cells.some((cell) => cell.row === row && cell.col === col))
 
-      // Calculate confidence for this shot
+   
       const confidence = calculateConfidence(row, col, currentShots, targetShips)
 
       const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
@@ -166,6 +188,12 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
 
     return () => clearTimeout(timer)
   }, [currentPlayer, gameOver, ships1, ships2, shots1, shots2])
+
+  useEffect(() => {
+  if (gameOver && winner) {
+    saveBattle();
+  }
+}, [gameOver, winner]);
 
   const updatedShips1 = updateSunkShips(ships1, shots2)
   const updatedShips2 = updateSunkShips(ships2, shots1)
@@ -199,21 +227,20 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
     </ScrollArea>
   )
 
-  // Function to calculate confidence based on AI strategy
-  const calculateConfidence = (row: number, col: number, currentShots: Shot[], targetShips: Ship[]): number => {
-    let confidence = 45 + Math.random() * 30 // Base: 45-75%
 
-    // Increase confidence if near previous hits
+  const calculateConfidence = (row: number, col: number, currentShots: Shot[], targetShips: Ship[]): number => {
+    let confidence = 45 + Math.random() * 30 
+
     const nearbyHits = currentShots.filter((s) => s.hit && Math.abs(s.row - row) <= 1 && Math.abs(s.col - col) <= 1)
     confidence += nearbyHits.length * 15
 
-    // Increase confidence for center positions (more likely to have ships)
+   
     const distanceFromCenter = Math.abs(row - 3.5) + Math.abs(col - 3.5)
     if (distanceFromCenter < 3) {
       confidence += 10
     }
 
-    // Cap at 98%
+   
     return Math.min(98, Math.round(confidence))
   }
 

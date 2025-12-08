@@ -1,0 +1,92 @@
+{
+  "id": "61a57f49-4f12-4691-94f4-1548465d5c2f",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.battles": {
+      "name": "battles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "model_a": {
+          "name": "model_a",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model_b": {
+          "name": "model_b",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accuracy_a": {
+          "name": "accuracy_a",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accuracy_b": {
+          "name": "accuracy_b",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hits_a": {
+          "name": "hits_a",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hits_b": {
+          "name": "hits_b",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "misses_a": {
+          "name": "misses_a",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "misses_b": {
+          "name": "misses_b",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "winner": {
+          "name": "winner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
