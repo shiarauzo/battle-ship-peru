@@ -151,8 +151,8 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
       const currentModel = currentPlayer === 1 ? aiModel1 : aiModel2
 
       try {
-        // Call AI API to get move decision
-        const response = await fetch("/api/api-move", {
+        
+        const response = await fetch("/api/ai-move", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
