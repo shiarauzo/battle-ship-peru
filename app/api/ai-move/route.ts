@@ -1,6 +1,10 @@
 // app/api/ai-move/route.ts
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+
 
 interface Shot {
   row: number;
@@ -23,9 +27,8 @@ export async function POST(req: Request) {
 
     console.log("Request:", { model, shotsCount: previousShots.length });
 
-    // ✅ CORRECTO: Verificar AI_GATEWAY_API_KEY (sin VERCEL_ prefix)
     if (!process.env.AI_GATEWAY_API_KEY) {
-      console.error("AI_GATEWAY_API_KEY not configured");
+      console.error(" AI_GATEWAY_API_KEY not configured");
       return NextResponse.json(
         { error: "AI_GATEWAY_API_KEY not configured" },
         { status: 500 }
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
     }
 
     if (availableCells.length === 0) {
-      console.error("No available cells");
+      console.error(" No available cells");
       return NextResponse.json(
         { error: "No available cells" },
         { status: 400 }
@@ -62,7 +65,6 @@ export async function POST(req: Request) {
         return `${col}${s.row + 1}`;
       });
 
-
     const recentShots = previousShots.slice(-10);
     const shotHistory = recentShots
       .map((shot, idx) => {
@@ -71,7 +73,6 @@ export async function POST(req: Request) {
         return `${globalIdx}. ${colLetter}${shot.row + 1}: ${shot.hit ? "HIT ✓" : "MISS ✗"}`;
       })
       .join("\n");
-
 
     const prompt = `You're playing Battleship on an 8x8 grid (rows 0-7, cols 0-7).
 
@@ -93,26 +94,58 @@ CRITICAL: Respond with ONLY valid JSON in this exact format:
 
 No explanations. No markdown. Just the JSON object.`;
 
-    console.log("Calling AI model:", model);
+    console.log(" Calling AI model:", model);
 
-
-    const { text } = await generateText({
-      model, // Formato: "openai/gpt-4o", "anthropic/claude-3-5-sonnet", etc.
-      prompt,
-      maxTokens: 150,
-      temperature: 0.8,
+    // ✅ CORRECTO: Usar el endpoint de Vercel AI Gateway
+    const response = await fetch("https://api.vercel.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.AI_GATEWAY_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: model, 
+        messages: [
+          {
+            role: "system",
+            content: "You are a strategic Battleship AI player. Always respond with valid JSON containing row (0-7) and col (0-7) coordinates."
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: 150,
+        temperature: 0.8,
+      }),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`AI Gateway error [${response.status}]:`, errorText);
+      
+      
+      const randomCell = availableCells[Math.floor(Math.random() * availableCells.length)];
+      return NextResponse.json({
+        row: randomCell.row,
+        col: randomCell.col,
+        fallback: true,
+        error: `API error: ${response.status}`,
+      });
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || "";
 
     console.log("AI Response:", text);
 
-    // Parse JSON response
+
     let move: { row: number; col: number };
     try {
-      // Extraer JSON del response (maneja casos con texto extra)
       const jsonMatch = text.match(/\{[\s\S]*?\}/);
       if (jsonMatch) {
         move = JSON.parse(jsonMatch[0]);
-        console.log("Parsed move:", move);
+        console.log(" Parsed move:", move);
       } else {
         throw new Error("No JSON found in AI response");
       }
@@ -120,7 +153,6 @@ No explanations. No markdown. Just the JSON object.`;
       console.error("Parse error:", parseError);
       console.error("Raw response:", text);
       
-   
       const randomCell = availableCells[Math.floor(Math.random() * availableCells.length)];
       console.log("Using fallback:", randomCell);
       
@@ -140,7 +172,7 @@ No explanations. No markdown. Just the JSON object.`;
       move.col < 0 ||
       move.col >= gridSize
     ) {
-      console.warn("Invalid coordinates from AI:", move);
+      console.warn(" Invalid coordinates from AI:", move);
       const randomCell = availableCells[Math.floor(Math.random() * availableCells.length)];
       return NextResponse.json({
         row: randomCell.row,
@@ -148,7 +180,6 @@ No explanations. No markdown. Just the JSON object.`;
         fallback: true,
       });
     }
-
 
     if (shotCells.has(`${move.row},${move.col}`)) {
       console.warn("AI chose already-shot cell:", move);
