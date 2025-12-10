@@ -9,22 +9,48 @@ import { Brain } from "lucide-react"
 const AI_MODELS = [
   // OpenAI
   { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
-  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI' },
-  { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'OpenAI' },
-  
+
   // Anthropic
-  { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
-  { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', provider: 'Anthropic' },
-  
+  { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic' },
+
   // Google
-  { id: 'google/gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google' },
-  { id: 'google/gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google' },
-  
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'Google' },
+
+  // xAI
+  { id: 'xai/grok-3', name: 'Grok 3', provider: 'xAI' },
+
   // Meta
-  { id: 'meta/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', provider: 'Meta' },
-  
+  { id: 'meta/llama-4-maverick', name: 'Llama 4 Maverick', provider: 'Meta' },
+
+  // DeepSeek
+  { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', provider: 'DeepSeek' },
+
   // Mistral
-  { id: 'mistral/mistral-large-latest', name: 'Mistral Large', provider: 'Mistral' },
+  { id: 'mistral/mistral-large', name: 'Mistral Large', provider: 'Mistral' },
+
+  // Alibaba
+  { id: 'alibaba/qwen3-max', name: 'Qwen 3 Max', provider: 'Alibaba' },
+
+  // Perplexity
+  { id: 'perplexity/sonar-pro', name: 'Sonar Pro', provider: 'Perplexity' },
+
+  // Cohere
+  { id: 'cohere/command-a', name: 'Command A', provider: 'Cohere' },
+
+  // Amazon
+  { id: 'amazon/nova-pro', name: 'Nova Pro', provider: 'Amazon' },
+
+  // Moonshot
+  { id: 'moonshot/kimi-k2', name: 'Kimi K2', provider: 'Moonshot' },
+
+  // Zhipu
+  { id: 'zhipu/glm-4.6', name: 'GLM 4.6', provider: 'Zhipu' },
+
+  // MiniMax
+  { id: 'minimax/minimax-m2', name: 'MiniMax M2', provider: 'MiniMax' },
+
+  // Meituan
+  { id: 'meituan/longcat-flash-thinking', name: 'Longcat Flash', provider: 'Meituan' },
 ]
 
 interface AISelectorProps {

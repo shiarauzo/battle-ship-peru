@@ -20,6 +20,8 @@ interface Shot {
   hit: boolean
   player: 1 | 2
   confidence: number
+  wasFollowUp?: boolean
+  previousHits?: { row: number; col: number }[]
 }
 
 interface BattleFieldProps {
@@ -119,6 +121,28 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
     return ships.reduce((total, ship) => total + ship.cells.length, 0)
   }
   const saveBattle = async () => {
+    // Prepare moves data for learning
+    const allMoves = [
+      ...shots1.map((shot, idx) => ({
+        model: aiModel1,
+        moveNumber: idx + 1,
+        row: shot.row,
+        col: shot.col,
+        hit: shot.hit,
+        wasFollowUp: shot.wasFollowUp || false,
+        previousHits: shot.previousHits || [],
+      })),
+      ...shots2.map((shot, idx) => ({
+        model: aiModel2,
+        moveNumber: idx + 1,
+        row: shot.row,
+        col: shot.col,
+        hit: shot.hit,
+        wasFollowUp: shot.wasFollowUp || false,
+        previousHits: shot.previousHits || [],
+      })),
+    ];
+
     await fetch("/api/save-battle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -135,7 +159,10 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
         missesA: shots1.filter(s => !s.hit).length,
         missesB: shots2.filter(s => !s.hit).length,
 
-        winner: winner === 1 ? aiModel1 : aiModel2
+        winner: winner === 1 ? aiModel1 : aiModel2,
+
+        // Include moves for learning
+        moves: allMoves,
       })
     });
   };
@@ -199,7 +226,15 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
 
         const confidence = calculateConfidence(row, col, currentShots, targetShips)
 
-        const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
+        const newShot: Shot = {
+          row,
+          col,
+          hit,
+          player: currentPlayer,
+          confidence,
+          wasFollowUp: data.wasFollowUp || false,
+          previousHits: data.previousHits || [],
+        }
 
         if (currentPlayer === 1) {
           const newShots = [...shots1, newShot]

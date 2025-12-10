@@ -5,7 +5,7 @@ export const useSound = (soundPath: string) => {
   
   useEffect(() => {
     audioRef.current = new Audio(soundPath)
-    audioRef.current.volume = 0.3 // 30% volume as requested
+    audioRef.current.volume = 0.3  //30% de volumen
   }, [soundPath])
   
   const play = useCallback(() => {
