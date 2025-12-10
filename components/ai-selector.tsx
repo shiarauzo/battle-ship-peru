@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Brain } from "lucide-react"
+import { Brain, ArrowLeft } from "lucide-react"
+import { useClickSound } from "@/hooks/useClickSound"
 
 const AI_MODELS = [
   // OpenAI
@@ -55,81 +56,106 @@ const AI_MODELS = [
 
 interface AISelectorProps {
   onStart: (model1: string, model2: string) => void
+  onBack: () => void
 }
 
-export function AISelector({ onStart }: AISelectorProps) {
-  const [open, setOpen] = useState(true)
+export function AISelector({ onStart, onBack }: AISelectorProps) {
   const [model1, setModel1] = useState("")
   const [model2, setModel2] = useState("")
+  const { playClick } = useClickSound()
 
   const handleStart = () => {
     if (model1 && model2) {
-      setOpen(false)
-      setTimeout(() => onStart(model1, model2), 300)
+      onStart(model1, model2)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[600px] bg-card/95 border-primary/50">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-glow uppercase">
-            <Brain className="h-6 w-6 text-primary" />[ BATTLESHIP AI ]
-          </DialogTitle>
-          <DialogDescription className="text-sm uppercase tracking-wide">
-            Select two AI models to start battle
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-5 py-4">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-primary uppercase tracking-wide">&gt; PLAYER_01 - AI</label>
-            <Select value={model1} onValueChange={setModel1}>
-              <SelectTrigger className="w-full border-primary/30" onClickSound={true}>
-                <SelectValue placeholder="SELECT MODEL" />
-              </SelectTrigger>
-              <SelectContent>
-                {AI_MODELS.map((model) => (
-                  <SelectItem key={model.id} value={model.id} disabled={model.id === model2}>
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium uppercase">{model.name}</span>
-                      
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="monitor-frame p-8 max-w-2xl w-full">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-2">
+              <Brain className="h-8 w-8 text-green-400" />
+              <h1 className="text-3xl font-bold text-glow uppercase tracking-wider">
+                [ BATTLESHIP AI ]
+              </h1>
+            </div>
+            <p className="text-muted-foreground uppercase tracking-wide text-sm">
+              Select two AI models to start battle
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-primary uppercase tracking-wide">&gt; PLAYER_02 - AI</label>
-            <Select value={model2} onValueChange={setModel2}>
-              <SelectTrigger className="w-full border-primary/30" onClickSound={true}>
-                <SelectValue placeholder="SELECT MODEL" />
-              </SelectTrigger>
-              <SelectContent>
-                {AI_MODELS.map((model) => (
-                  <SelectItem key={model.id} value={model.id} disabled={model.id === model1}>
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium uppercase">{model.name}</span>
-                      
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Model Selection */}
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-green-400 uppercase tracking-wide">
+                &gt; PLAYER_01 - AI
+              </label>
+              <Select value={model1} onValueChange={setModel1}>
+                <SelectTrigger className="w-full border-green-600/30">
+                  <SelectValue placeholder="SELECT MODEL" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AI_MODELS.map((model) => (
+                    <SelectItem key={model.id} value={model.id} disabled={model.id === model2}>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium uppercase">{model.name}</span>
+                        <span className="text-xs text-muted-foreground">{model.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-green-400 uppercase tracking-wide">
+                &gt; PLAYER_02 - AI
+              </label>
+              <Select value={model2} onValueChange={setModel2}>
+                <SelectTrigger className="w-full border-green-600/30">
+                  <SelectValue placeholder="SELECT MODEL" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AI_MODELS.map((model) => (
+                    <SelectItem key={model.id} value={model.id} disabled={model.id === model1}>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium uppercase">{model.name}</span>
+                        <span className="text-xs text-muted-foreground">{model.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <Button
-            onClick={handleStart}
-            onClickSound={true}
-            disabled={!model1 || !model2}
-            className="w-full h-11 text-sm font-bold uppercase tracking-wider"
-          >
-            &gt;&gt; START BATTLE &lt;&lt;
-          </Button>
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <Button
+              onClick={handleStart}
+              disabled={!model1 || !model2}
+              className="w-full h-12 text-sm font-bold uppercase tracking-wider bg-green-600 hover:bg-green-500 text-black"
+            >
+              &gt;&gt; START BATTLE &lt;&lt;
+            </Button>
+            
+            <Button
+              onClick={() => {
+                playClick()
+                onBack()
+              }}
+              variant="outline"
+              className="w-full h-10 font-bold uppercase tracking-wider border-green-600 text-green-400 hover:bg-green-950"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Menu
+            </Button>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </Card>
+    </div>
   )
 }

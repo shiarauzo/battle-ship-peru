@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Grid } from "@/components/grid"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Trophy, Target } from "lucide-react"
-import { AutoScrollArea } from "@/components/ui/auto-scroll-area"
+import { Trophy, Target, ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useClickSound } from "@/hooks/useClickSound"
 
 interface Ship {
   id: number
@@ -27,6 +28,7 @@ interface Shot {
 interface BattleFieldProps {
   aiModel1: string
   aiModel2: string
+  onBackToMenu?: () => void
 }
 
 const COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "H"]
@@ -56,7 +58,6 @@ const generateShips = (): Ship[] => {
 
       if (horizontal && col + size > 8) continue
       if (!horizontal && row + size > 8) continue
-
 
       const cells: { row: number; col: number }[] = []
       let canPlace = true
@@ -89,9 +90,7 @@ const generateShips = (): Ship[] => {
   return ships
 }
 
-
-
-export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
+export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldProps) {
   const [ships1] = useState<Ship[]>(generateShips())
   const [ships2] = useState<Ship[]>(generateShips())
   const [shots1, setShots1] = useState<Shot[]>([])
@@ -100,6 +99,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
   const [gameOver, setGameOver] = useState(false)
   const [winner, setWinner] = useState<1 | 2 | null>(null)
   const [isThinking, setIsThinking] = useState(false)
+  const { playClick } = useClickSound()
 
   const updateSunkShips = (ships: Ship[], shots: Shot[]): Ship[] => {
     return ships.map((ship) => {
@@ -110,7 +110,6 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
     })
   }
 
-
   const calculateAccuracy = (shots: Shot[]) => {
     if (shots.length === 0) return 0
     const hits = shots.filter((s) => s.hit).length
@@ -120,7 +119,22 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
   const getTotalShipCells = (ships: Ship[]) => {
     return ships.reduce((total, ship) => total + ship.cells.length, 0)
   }
-  const saveBattle = async () => {
+
+  const calculateConfidence = (row: number, col: number, currentShots: Shot[]): number => {
+    let confidence = 45 + Math.random() * 30
+
+    const nearbyHits = currentShots.filter((s) => s.hit && Math.abs(s.row - row) <= 1 && Math.abs(s.col - col) <= 1)
+    confidence += nearbyHits.length * 15
+
+    const distanceFromCenter = Math.abs(row - 3.5) + Math.abs(col - 3.5)
+    if (distanceFromCenter < 3) {
+      confidence += 10
+    }
+
+    return Math.min(98, Math.round(confidence))
+  }
+
+  const saveBattle = useCallback(async () => {
     // Prepare moves data for learning
     const allMoves = [
       ...shots1.map((shot, idx) => ({
@@ -149,24 +163,17 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
       body: JSON.stringify({
         modelA: aiModel1,
         modelB: aiModel2,
-
         accuracyA: calculateAccuracy(shots1),
         accuracyB: calculateAccuracy(shots2),
-
         hitsA: shots1.filter(s => s.hit).length,
         hitsB: shots2.filter(s => s.hit).length,
-
         missesA: shots1.filter(s => !s.hit).length,
         missesB: shots2.filter(s => !s.hit).length,
-
         winner: winner === 1 ? aiModel1 : aiModel2,
-
-        // Include moves for learning
         moves: allMoves,
       })
     });
-  };
-
+  }, [aiModel1, aiModel2, shots1, shots2, winner]);
 
   useEffect(() => {
     if (gameOver || isThinking) return
@@ -178,7 +185,6 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
       const currentModel = currentPlayer === 1 ? aiModel1 : aiModel2
 
       try {
-        
         const response = await fetch("/api/ai-move", {
           method: "POST",
           headers: {
@@ -203,7 +209,6 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
         let row = data.row
         let col = data.col
 
-        // Fallback: if API returns invalid or already-shot cell, use random
         if (
           row === undefined ||
           col === undefined ||
@@ -217,14 +222,13 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
           } while (attempts < 100 && currentShots.some((s) => s.row === row && s.col === col))
         }
 
-        // Small delay for visual effect
         await new Promise((resolve) => setTimeout(resolve, 300))
 
         const hit = targetShips.some((ship) =>
           ship.cells.some((cell) => cell.row === row && cell.col === col)
         )
 
-        const confidence = calculateConfidence(row, col, currentShots, targetShips)
+        const confidence = calculateConfidence(row, col, currentShots)
 
         const newShot: Shot = {
           row,
@@ -259,10 +263,6 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
         setCurrentPlayer(currentPlayer === 1 ? 2 : 1)
       } catch (error) {
         console.error("Error making AI move:", error)
-        // Fallback to random move on error
-        const targetShips = currentPlayer === 1 ? ships2 : ships1
-        const currentShots = currentPlayer === 1 ? shots1 : shots2
-
         let row: number, col: number
         let attempts = 0
         do {
@@ -275,7 +275,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
           ship.cells.some((cell) => cell.row === row && cell.col === col)
         )
 
-        const confidence = calculateConfidence(row, col, currentShots, targetShips)
+        const confidence = calculateConfidence(row, col, currentShots)
 
         const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
 
@@ -305,7 +305,6 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
       }
     }
 
-    // Small initial delay before first move
     const timer = setTimeout(() => {
       makeMove()
     }, 300)
@@ -314,21 +313,16 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
   }, [currentPlayer, gameOver, ships1, ships2, shots1, shots2, aiModel1, aiModel2, isThinking])
 
   useEffect(() => {
-  if (gameOver && winner) {
-    saveBattle();
-  }
-}, [gameOver, winner]);
+    if (gameOver && winner) {
+      saveBattle();
+    }
+  }, [gameOver, winner, saveBattle]);
 
   const updatedShips1 = updateSunkShips(ships1, shots2)
   const updatedShips2 = updateSunkShips(ships2, shots1)
 
-  const renderShotLog = (shots: Shot[], aiModel: string) => (
-    <AutoScrollArea 
-      className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50"
-      scrollDependencies={[shots]}
-      scrollBehavior="smooth"
-      scrollDelay={50}
-    >
+  const renderShotLog = (shots: Shot[]) => (
+    <div className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50 overflow-y-auto">
       <div className="space-y-1">
         {shots.length === 0 ? (
           <p className="text-center text-muted-foreground text-xs py-2">ESPERANDO...</p>
@@ -353,38 +347,35 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
           ))
         )}
       </div>
-    </AutoScrollArea>
+    </div>
   )
-
-
-  const calculateConfidence = (row: number, col: number, currentShots: Shot[], targetShips: Ship[]): number => {
-    let confidence = 45 + Math.random() * 30 
-
-    const nearbyHits = currentShots.filter((s) => s.hit && Math.abs(s.row - row) <= 1 && Math.abs(s.col - col) <= 1)
-    confidence += nearbyHits.length * 15
-
-   
-    const distanceFromCenter = Math.abs(row - 3.5) + Math.abs(col - 3.5)
-    if (distanceFromCenter < 3) {
-      confidence += 10
-    }
-
-   
-    return Math.min(98, Math.round(confidence))
-  }
 
   return (
     <div className="min-h-screen p-8 monitor-frame">
       <div className="max-w-7xl mx-auto space-y-4">
-        {/* Header */}
         <div className="text-center space-y-1">
+          {onBackToMenu && (
+            <div className="flex justify-start">
+              <Button
+                onClick={() => {
+                  playClick()
+                  onBackToMenu()
+                }}
+                variant="outline"
+                size="sm"
+                className="border-green-600 text-green-400 hover:bg-green-950"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Menu
+              </Button>
+            </div>
+          )}
           <h1 className="text-3xl md:text-4xl font-bold text-balance text-glow uppercase tracking-wider">
             [ BATALLA NAVAL IA ]
           </h1>
           <p className="text-muted-foreground text-sm uppercase tracking-wide">Sistema de Combate Terminal v2.0</p>
         </div>
 
-        {/* Winner Banner */}
         {gameOver && winner && (
           <Card className="p-4 bg-primary/20 text-primary border-primary animate-pulse">
             <div className="flex items-center justify-center gap-3">
@@ -397,9 +388,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
           </Card>
         )}
 
-        {/* Battle Grids */}
         <div className="grid md:grid-cols-2 gap-4">
-          {/* Player 1 */}
           <Card className="p-4 space-y-3 bg-card/80 border-primary/30 grid-glow">
             <div className="flex items-center justify-between border-b border-primary/30 pb-2">
               <div>
@@ -442,12 +431,11 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
                 <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-primary">
                   &gt; REGISTRO DE DISPAROS
                 </h3>
-                {renderShotLog(shots1, aiModel1)}
+                {renderShotLog(shots1)}
               </div>
             </div>
           </Card>
 
-          {/* Player 2 */}
           <Card className="p-4 space-y-3 bg-card/80 border-primary/30 grid-glow">
             <div className="flex items-center justify-between border-b border-primary/30 pb-2">
               <div>
@@ -490,7 +478,7 @@ export function BattleField({ aiModel1, aiModel2 }: BattleFieldProps) {
                 <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-primary">
                   &gt; REGISTRO DE DISPAROS
                 </h3>
-                {renderShotLog(shots2, aiModel2)}
+                {renderShotLog(shots2)}
               </div>
             </div>
           </Card>
