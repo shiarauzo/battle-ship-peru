@@ -163,53 +163,141 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
 
 
   useEffect(() => {
-    if (gameOver) return
+    if (gameOver || isThinking) return
 
-    const timer = setTimeout(() => {
+    const makeMove = async () => {
+      setIsThinking(true)
       const targetShips = currentPlayer === 1 ? ships2 : ships1
       const currentShots = currentPlayer === 1 ? shots1 : shots2
+      const currentModel = currentPlayer === 1 ? aiModel1 : aiModel2
 
-      
-      let row: number, col: number
-      let attempts = 0
-      do {
-        row = Math.floor(Math.random() * 8)
-        col = Math.floor(Math.random() * 8)
-        attempts++
-      } while (attempts < 100 && currentShots.some((s) => s.row === row && s.col === col))
+      try {
+        
+        const response = await fetch("/api/ai-move", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            previousShots: currentShots.map((shot) => ({
+              row: shot.row,
+              col: shot.col,
+              hit: shot.hit,
+            })),
+            gridSize: 8,
+          }),
+        })
 
-      const hit = targetShips.some((ship) => ship.cells.some((cell) => cell.row === row && cell.col === col))
-
-   
-      const confidence = calculateConfidence(row, col, currentShots)
-
-      const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
-
-      if (currentPlayer === 1) {
-        const newShots = [...shots1, newShot]
-        setShots1(newShots)
-        const totalCells = getTotalShipCells(ships2)
-        const hits = newShots.filter((s) => s.hit).length
-        if (hits === totalCells) {
-          setGameOver(true)
-          setWinner(1)
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`)
         }
-      } else {
-        const newShots = [...shots2, newShot]
-        setShots2(newShots)
-        const totalCells = getTotalShipCells(ships1)
-        const hits = newShots.filter((s) => s.hit).length
-        if (hits === totalCells) {
-          setGameOver(true)
-          setWinner(2)
+
+        const data = await response.json()
+        let row = data.row
+        let col = data.col
+
+        // Fallback: if API returns invalid or already-shot cell, use random
+        if (
+          row === undefined ||
+          col === undefined ||
+          currentShots.some((s) => s.row === row && s.col === col)
+        ) {
+          let attempts = 0
+          do {
+            row = Math.floor(Math.random() * 8)
+            col = Math.floor(Math.random() * 8)
+            attempts++
+          } while (attempts < 100 && currentShots.some((s) => s.row === row && s.col === col))
         }
+
+        // Small delay for visual effect
+        await new Promise((resolve) => setTimeout(resolve, 300))
+
+        const hit = targetShips.some((ship) =>
+          ship.cells.some((cell) => cell.row === row && cell.col === col)
+        )
+
+        const confidence = calculateConfidence(row, col, currentShots, targetShips)
+
+        const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
+
+        if (currentPlayer === 1) {
+          const newShots = [...shots1, newShot]
+          setShots1(newShots)
+          const totalCells = getTotalShipCells(ships2)
+          const hits = newShots.filter((s) => s.hit).length
+          if (hits === totalCells) {
+            setGameOver(true)
+            setWinner(1)
+          }
+        } else {
+          const newShots = [...shots2, newShot]
+          setShots2(newShots)
+          const totalCells = getTotalShipCells(ships1)
+          const hits = newShots.filter((s) => s.hit).length
+          if (hits === totalCells) {
+            setGameOver(true)
+            setWinner(2)
+          }
+        }
+
+        setCurrentPlayer(currentPlayer === 1 ? 2 : 1)
+      } catch (error) {
+        console.error("Error making AI move:", error)
+        // Fallback to random move on error
+        const targetShips = currentPlayer === 1 ? ships2 : ships1
+        const currentShots = currentPlayer === 1 ? shots1 : shots2
+
+        let row: number, col: number
+        let attempts = 0
+        do {
+          row = Math.floor(Math.random() * 8)
+          col = Math.floor(Math.random() * 8)
+          attempts++
+        } while (attempts < 100 && currentShots.some((s) => s.row === row && s.col === col))
+
+        const hit = targetShips.some((ship) =>
+          ship.cells.some((cell) => cell.row === row && cell.col === col)
+        )
+
+        const confidence = calculateConfidence(row, col, currentShots, targetShips)
+
+        const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
+
+        if (currentPlayer === 1) {
+          const newShots = [...shots1, newShot]
+          setShots1(newShots)
+          const totalCells = getTotalShipCells(ships2)
+          const hits = newShots.filter((s) => s.hit).length
+          if (hits === totalCells) {
+            setGameOver(true)
+            setWinner(1)
+          }
+        } else {
+          const newShots = [...shots2, newShot]
+          setShots2(newShots)
+          const totalCells = getTotalShipCells(ships1)
+          const hits = newShots.filter((s) => s.hit).length
+          if (hits === totalCells) {
+            setGameOver(true)
+            setWinner(2)
+          }
+        }
+
+        setCurrentPlayer(currentPlayer === 1 ? 2 : 1)
+      } finally {
+        setIsThinking(false)
       }
+    }
 
-      setCurrentPlayer(currentPlayer === 1 ? 2 : 1)
+    // Small initial delay before first move
+    const timer = setTimeout(() => {
+      makeMove()
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [currentPlayer, gameOver, ships1, ships2, shots1, shots2])
+  }, [currentPlayer, gameOver, ships1, ships2, shots1, shots2, aiModel1, aiModel2, isThinking])
 
   useEffect(() => {
   if (gameOver && winner) {
@@ -220,8 +308,13 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
   const updatedShips1 = updateSunkShips(ships1, shots2)
   const updatedShips2 = updateSunkShips(ships2, shots1)
 
-  const renderShotLog = (shots: Shot[]) => (
-    <ScrollArea className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50">
+  const renderShotLog = (shots: Shot[], aiModel: string) => (
+    <AutoScrollArea 
+      className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50"
+      scrollDependencies={[shots]}
+      scrollBehavior="smooth"
+      scrollDelay={50}
+    >
       <div className="space-y-1">
         {shots.length === 0 ? (
           <p className="text-center text-muted-foreground text-xs py-2">ESPERANDO...</p>
@@ -246,7 +339,7 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
           ))
         )}
       </div>
-    </ScrollArea>
+    </AutoScrollArea>
   )
 
   return (
@@ -300,7 +393,7 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
                   {currentPlayer === 1 && !gameOver && (
                     <Badge variant="default" className="animate-pulse text-[10px] px-1 py-0">
                       <Target className="h-2 w-2 mr-1" />
-                      ACTIVO
+                      {isThinking ? "PENSANDO..." : "ACTIVO"}
                     </Badge>
                   )}
                 </h2>
@@ -348,7 +441,7 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
                   {currentPlayer === 2 && !gameOver && (
                     <Badge variant="default" className="animate-pulse text-[10px] px-1 py-0">
                       <Target className="h-2 w-2 mr-1" />
-                      ACTIVO
+                      {isThinking ? "PENSANDO..." : "ACTIVO"}
                     </Badge>
                   )}
                 </h2>

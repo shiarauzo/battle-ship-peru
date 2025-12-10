@@ -8,25 +8,24 @@ import { Brain, ArrowLeft } from "lucide-react"
 import { useClickSound } from "@/hooks/useClickSound"
 
 const AI_MODELS = [
-  // OpenAI Models
-  { id: "openai/gpt-4.1-mini", name: "GPT-4.1 Mini", description: "Balanced performance with 1M context" },
-  { id: "openai/gpt-5-mini", name: "GPT-5 Mini", description: "Latest OpenAI model with 400K context" },
+  // OpenAI
+  { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
+  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI' },
+  { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'OpenAI' },
   
-  // Anthropic Models  
-  { id: "anthropic/claude-sonnet-4.5", name: "Claude Sonnet 4.5", description: "Advanced reasoning with 200K context" },
-  { id: "anthropic/claude-haiku-4.5", name: "Claude Haiku 4.5", description: "Fast responses with 200K context" },
-  { id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", description: "Powerful analysis with 200K context" },
+  // Anthropic
+  { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
+  { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', provider: 'Anthropic' },
   
-  // Google Models
-  { id: "google/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash", description: "Ultra-fast with 1M context" },
-  { id: "google/gemini-3-pro-preview", name: "Gemini 3 Pro", description: "Advanced capabilities with 1M context" },
+  // Google
+  { id: 'google/gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google' },
+  { id: 'google/gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google' },
   
-  // xAI Models
-  { id: "xai/grok-code-fast-1", name: "Grok Code Fast", description: "Code-optimized strategy with 256K context" },
-  { id: "xai/grok-4-fast-reasoning", name: "Grok 4 Fast", description: "Strategic reasoning with 2M context" },
+  // Meta
+  { id: 'meta/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', provider: 'Meta' },
   
-  // Additional Model
-  { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", description: "Balanced performance with 200K context" },
+  // Mistral
+  { id: 'mistral/mistral-large-latest', name: 'Mistral Large', provider: 'Mistral' },
 ]
 
 interface AISelectorProps {

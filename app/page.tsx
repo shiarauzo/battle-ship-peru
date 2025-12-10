@@ -51,6 +51,6 @@ export default function Home() {
           onBackToMenu={handleBackToMenu}
         />
       )}
-    </main>
+    </div>
   )
 }
