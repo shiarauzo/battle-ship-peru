@@ -8,6 +8,7 @@ import { Ranking } from "@/components/ranking"
 
 type View = "menu" | "play" | "ranking" | "game"
 
+
 export default function Home() {
   const [currentView, setCurrentView] = useState<View>("menu")
   const [aiModel1, setAIModel1] = useState("")
