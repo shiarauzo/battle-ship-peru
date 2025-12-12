@@ -1,4 +1,13 @@
-import { pgTable, serial, text, integer, timestamp, json, boolean, real } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  text,
+  integer,
+  timestamp,
+  json,
+  boolean,
+  real,
+} from "drizzle-orm/pg-core";
 
 export const battles = pgTable("battles", {
   id: serial("id").primaryKey(),
@@ -53,5 +62,33 @@ export const modelStrategies = pgTable("model_strategies", {
   totalUses: integer("total_uses").default(0),
   // Effectiveness score (0-1)
   effectiveness: real("effectiveness").default(0),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Q-Learning values for reinforcement learning
+export const modelQValues = pgTable("model_q_values", {
+  id: serial("id").primaryKey(),
+  model: text("model").notNull(),
+  // State representation: "hunt_early:hits=0:active=0", "target_2hit_h:hits=5:active=2", etc.
+  state: text("state").notNull(),
+  // Action type: "center_focus", "checkerboard", "adjacent", "continue_direction"
+  action: text("action").notNull(),
+  // Q-value for this state-action pair
+  qValue: real("q_value").default(0),
+  // Number of times this state-action has been visited
+  visitCount: integer("visit_count").default(0),
+  // Model-specific hyperparameters
+  learningRate: real("learning_rate").default(0.1),
+  discountFactor: real("discount_factor").default(0.9),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Model hyperparameters configuration
+export const modelHyperparameters = pgTable("model_hyperparameters", {
+  id: serial("id").primaryKey(),
+  model: text("model").notNull().unique(),
+  learningRate: real("learning_rate").default(0.1),
+  discountFactor: real("discount_factor").default(0.9),
+  explorationRate: real("exploration_rate").default(0.15),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Grid } from "@/components/grid";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Target, ArrowLeft } from "lucide-react";
+import { Trophy, Target, ArrowLeft, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useClickSound } from "@/hooks/useClickSound";
 
@@ -100,6 +100,12 @@ export function BattleField({
   const [isThinking, setIsThinking] = useState(false);
   const { playClick } = useClickSound();
 
+  // Heatmap state
+  const [heatmap1, setHeatmap1] = useState<number[][] | undefined>(undefined);
+  const [heatmap2, setHeatmap2] = useState<number[][] | undefined>(undefined);
+  const [showHeatmap1, setShowHeatmap1] = useState(true);
+  const [showHeatmap2, setShowHeatmap2] = useState(true);
+
   const updateSunkShips = (ships: Ship[], shots: Shot[]): Ship[] => {
     return ships.map((ship) => {
       const allCellsHit = ship.cells.every((cell) =>
@@ -125,7 +131,13 @@ export function BattleField({
     row: number,
     col: number,
     currentShots: Shot[],
+    heatmap?: number[][],
   ): number => {
+    // Use heatmap probability if available
+    if (heatmap && heatmap[row] && heatmap[row][col] !== undefined) {
+      return Math.round(heatmap[row][col] * 100);
+    }
+
     let confidence = 45 + Math.random() * 30;
 
     const nearbyHits = currentShots.filter(
@@ -216,6 +228,15 @@ export function BattleField({
         let row = data.row;
         let col = data.col;
 
+        // Update heatmap for the current player
+        if (data.heatmap) {
+          if (currentPlayer === 1) {
+            setHeatmap1(data.heatmap);
+          } else {
+            setHeatmap2(data.heatmap);
+          }
+        }
+
         if (
           row === undefined ||
           col === undefined ||
@@ -238,7 +259,12 @@ export function BattleField({
           ship.cells.some((cell) => cell.row === row && cell.col === col),
         );
 
-        const confidence = calculateConfidence(row, col, currentShots);
+        const confidence = calculateConfidence(
+          row,
+          col,
+          currentShots,
+          data.heatmap,
+        );
 
         const newShot: Shot = {
           row,
@@ -351,21 +377,21 @@ export function BattleField({
   const updatedShips2 = updateSunkShips(ships2, shots1);
 
   const renderShotLog = (shots: Shot[]) => (
-    <div className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50 overflow-y-auto">
+    <div className="h-[120px] w-full rounded border border-primary/30 p-2 bg-card/50 overflow-y-auto">
       <div className="space-y-1">
         {shots.length === 0 ? (
           <p className="text-center text-muted-foreground text-xs py-2">
             ESPERANDO...
           </p>
         ) : (
-          shots.map((shot, index) => (
+          shots.slice(-10).map((shot, index) => (
             <div
               key={index}
               className="flex items-center justify-between p-1.5 rounded bg-muted/30 text-xs"
             >
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono text-muted-foreground">
-                  #{index + 1}
+                  #{shots.length - 10 + index + 1}
                 </span>
                 <Badge
                   variant="outline"
@@ -419,7 +445,7 @@ export function BattleField({
             [ BATALLA NAVAL IA ]
           </h1>
           <p className="text-muted-foreground text-sm uppercase tracking-wide">
-            Sistema de Combate Terminal v2.0
+            Sistema de Combate Terminal v3.0 - Probabilistic AI + Q-Learning
           </p>
         </div>
 
@@ -436,6 +462,7 @@ export function BattleField({
         )}
 
         <div className="grid md:grid-cols-2 gap-4">
+          {/* Player 1 Card */}
           <Card className="p-4 space-y-3 bg-card/80 border-primary/30 grid-glow">
             <div className="flex items-center justify-between border-b border-primary/30 pb-2">
               <div>
@@ -464,8 +491,38 @@ export function BattleField({
                 </div>
               </div>
             </div>
+
+            {/* Heatmap Toggle */}
+            <div className="flex items-center justify-between">
+              <Button
+                onClick={() => {
+                  playClick();
+                  setShowHeatmap1(!showHeatmap1);
+                }}
+                variant={showHeatmap1 ? "default" : "outline"}
+                size="sm"
+                className={`text-[10px] h-6 ${
+                  showHeatmap1
+                    ? "bg-orange-600 hover:bg-orange-700"
+                    : "border-orange-600 text-orange-400 hover:bg-orange-950"
+                }`}
+              >
+                <Flame className="h-3 w-3 mr-1" />
+                MAPA DE CALOR
+              </Button>
+              <div className="text-[9px] text-muted-foreground">
+                {heatmap1 ? "AI PROBABILISTICO" : "CARGANDO..."}
+              </div>
+            </div>
+
             <div className="flex justify-center">
-              <Grid ships={updatedShips2} shots={shots1} showShips={true} />
+              <Grid
+                ships={updatedShips2}
+                shots={shots1}
+                showShips={true}
+                heatmap={heatmap1}
+                showHeatmap={showHeatmap1}
+              />
             </div>
             <div className="space-y-2 border-t border-primary/30 pt-2">
               <div className="grid grid-cols-2 gap-2 text-[10px]">
@@ -493,6 +550,7 @@ export function BattleField({
             </div>
           </Card>
 
+          {/* Player 2 Card */}
           <Card className="p-4 space-y-3 bg-card/80 border-primary/30 grid-glow">
             <div className="flex items-center justify-between border-b border-primary/30 pb-2">
               <div>
@@ -521,8 +579,38 @@ export function BattleField({
                 </div>
               </div>
             </div>
+
+            {/* Heatmap Toggle */}
+            <div className="flex items-center justify-between">
+              <Button
+                onClick={() => {
+                  playClick();
+                  setShowHeatmap2(!showHeatmap2);
+                }}
+                variant={showHeatmap2 ? "default" : "outline"}
+                size="sm"
+                className={`text-[10px] h-6 ${
+                  showHeatmap2
+                    ? "bg-orange-600 hover:bg-orange-700"
+                    : "border-orange-600 text-orange-400 hover:bg-orange-950"
+                }`}
+              >
+                <Flame className="h-3 w-3 mr-1" />
+                MAPA DE CALOR
+              </Button>
+              <div className="text-[9px] text-muted-foreground">
+                {heatmap2 ? "AI PROBABILISTICO" : "CARGANDO..."}
+              </div>
+            </div>
+
             <div className="flex justify-center">
-              <Grid ships={updatedShips1} shots={shots2} showShips={true} />
+              <Grid
+                ships={updatedShips1}
+                shots={shots2}
+                showShips={true}
+                heatmap={heatmap2}
+                showHeatmap={showHeatmap2}
+              />
             </div>
             <div className="space-y-2 border-t border-primary/30 pt-2">
               <div className="grid grid-cols-2 gap-2 text-[10px]">
@@ -550,6 +638,50 @@ export function BattleField({
             </div>
           </Card>
         </div>
+
+        {/* Heatmap Legend */}
+        <Card className="p-3 bg-card/60 border-primary/20">
+          <div className="flex items-center justify-center gap-4 text-[10px]">
+            <span className="text-muted-foreground uppercase font-semibold">
+              Leyenda Mapa de Calor:
+            </span>
+            <div className="flex items-center gap-1">
+              <div
+                className="w-4 h-4 rounded"
+                style={{ backgroundColor: "rgba(59, 130, 246, 0.5)" }}
+              />
+              <span>0-20%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div
+                className="w-4 h-4 rounded"
+                style={{ backgroundColor: "rgba(6, 182, 212, 0.5)" }}
+              />
+              <span>20-40%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div
+                className="w-4 h-4 rounded"
+                style={{ backgroundColor: "rgba(234, 179, 8, 0.6)" }}
+              />
+              <span>40-60%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div
+                className="w-4 h-4 rounded"
+                style={{ backgroundColor: "rgba(249, 115, 22, 0.7)" }}
+              />
+              <span>60-80%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div
+                className="w-4 h-4 rounded"
+                style={{ backgroundColor: "rgba(239, 68, 68, 0.9)" }}
+              />
+              <span>80-100%</span>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
