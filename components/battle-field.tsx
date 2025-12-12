@@ -1,138 +1,145 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Grid } from "@/components/grid"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Trophy, Target, ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useClickSound } from "@/hooks/useClickSound"
+import { useState, useEffect, useCallback } from "react";
+import { Grid } from "@/components/grid";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Trophy, Target, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useClickSound } from "@/hooks/useClickSound";
 
 interface Ship {
-  id: number
-  cells: { row: number; col: number }[]
-  sunk: boolean
-  color: string
+  id: number;
+  cells: { row: number; col: number }[];
+  sunk: boolean;
+  color: string;
 }
 
 interface Shot {
-  row: number
-  col: number
-  hit: boolean
-  player: 1 | 2
-  confidence: number
-  wasFollowUp?: boolean
-  previousHits?: { row: number; col: number }[]
+  row: number;
+  col: number;
+  hit: boolean;
+  player: 1 | 2;
+  confidence: number;
+  wasFollowUp?: boolean;
+  previousHits?: { row: number; col: number }[];
 }
 
 interface BattleFieldProps {
-  aiModel1: string
-  aiModel2: string
-  onBackToMenu?: () => void
+  aiModel1: string;
+  aiModel2: string;
+  onBackToMenu?: () => void;
 }
 
-const COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "H"]
+const COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 const generateShips = (): Ship[] => {
-  const ships: Ship[] = []
-  const shipSizes = [5, 4, 3, 3, 2]
-  const colors = [
-    "hsl(200, 70%, 60%)",
-    "hsl(220, 70%, 60%)",
-    "hsl(180, 70%, 60%)",
-    "hsl(160, 70%, 60%)",
-    "hsl(140, 70%, 60%)",
-  ]
-  const occupied = new Set<string>()
+  const ships: Ship[] = [];
+  const shipSizes = [5, 4, 3, 3, 2];
+  const colors = Array(5).fill("hsl(160, 50%, 40%)");
+
+  const occupied = new Set<string>();
 
   for (let i = 0; i < shipSizes.length; i++) {
-    const size = shipSizes[i]
-    let placed = false
-    let attempts = 0
+    const size = shipSizes[i];
+    let placed = false;
+    let attempts = 0;
 
     while (!placed && attempts < 100) {
-      attempts++
-      const horizontal = Math.random() > 0.5
-      const row = Math.floor(Math.random() * 8)
-      const col = Math.floor(Math.random() * 8)
+      attempts++;
+      const horizontal = Math.random() > 0.5;
+      const row = Math.floor(Math.random() * 8);
+      const col = Math.floor(Math.random() * 8);
 
-      if (horizontal && col + size > 8) continue
-      if (!horizontal && row + size > 8) continue
+      if (horizontal && col + size > 8) continue;
+      if (!horizontal && row + size > 8) continue;
 
-      const cells: { row: number; col: number }[] = []
-      let canPlace = true
+      const cells: { row: number; col: number }[] = [];
+      let canPlace = true;
 
       for (let j = 0; j < size; j++) {
-        const cellRow = horizontal ? row : row + j
-        const cellCol = horizontal ? col + j : col
-        const key = `${cellRow},${cellCol}`
+        const cellRow = horizontal ? row : row + j;
+        const cellCol = horizontal ? col + j : col;
+        const key = `${cellRow},${cellCol}`;
 
         if (occupied.has(key)) {
-          canPlace = false
-          break
+          canPlace = false;
+          break;
         }
-        cells.push({ row: cellRow, col: cellCol })
+        cells.push({ row: cellRow, col: cellCol });
       }
 
       if (canPlace) {
-        cells.forEach((cell) => occupied.add(`${cell.row},${cell.col}`))
+        cells.forEach((cell) => occupied.add(`${cell.row},${cell.col}`));
         ships.push({
           id: i,
           cells,
           sunk: false,
           color: colors[i],
-        })
-        placed = true
+        });
+        placed = true;
       }
     }
   }
 
-  return ships
-}
+  return ships;
+};
 
-export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldProps) {
-  const [ships1] = useState<Ship[]>(generateShips())
-  const [ships2] = useState<Ship[]>(generateShips())
-  const [shots1, setShots1] = useState<Shot[]>([])
-  const [shots2, setShots2] = useState<Shot[]>([])
-  const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1)
-  const [gameOver, setGameOver] = useState(false)
-  const [winner, setWinner] = useState<1 | 2 | null>(null)
-  const [isThinking, setIsThinking] = useState(false)
-  const { playClick } = useClickSound()
+export function BattleField({
+  aiModel1,
+  aiModel2,
+  onBackToMenu,
+}: BattleFieldProps) {
+  const [ships1] = useState<Ship[]>(generateShips());
+  const [ships2] = useState<Ship[]>(generateShips());
+  const [shots1, setShots1] = useState<Shot[]>([]);
+  const [shots2, setShots2] = useState<Shot[]>([]);
+  const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
+  const [gameOver, setGameOver] = useState(false);
+  const [winner, setWinner] = useState<1 | 2 | null>(null);
+  const [isThinking, setIsThinking] = useState(false);
+  const { playClick } = useClickSound();
 
   const updateSunkShips = (ships: Ship[], shots: Shot[]): Ship[] => {
     return ships.map((ship) => {
       const allCellsHit = ship.cells.every((cell) =>
-        shots.some((shot) => shot.row === cell.row && shot.col === cell.col && shot.hit),
-      )
-      return { ...ship, sunk: allCellsHit }
-    })
-  }
+        shots.some(
+          (shot) => shot.row === cell.row && shot.col === cell.col && shot.hit,
+        ),
+      );
+      return { ...ship, sunk: allCellsHit };
+    });
+  };
 
   const calculateAccuracy = (shots: Shot[]) => {
-    if (shots.length === 0) return 0
-    const hits = shots.filter((s) => s.hit).length
-    return Math.round((hits / shots.length) * 100)
-  }
+    if (shots.length === 0) return 0;
+    const hits = shots.filter((s) => s.hit).length;
+    return Math.round((hits / shots.length) * 100);
+  };
 
   const getTotalShipCells = (ships: Ship[]) => {
-    return ships.reduce((total, ship) => total + ship.cells.length, 0)
-  }
+    return ships.reduce((total, ship) => total + ship.cells.length, 0);
+  };
 
-  const calculateConfidence = (row: number, col: number, currentShots: Shot[]): number => {
-    let confidence = 45 + Math.random() * 30
+  const calculateConfidence = (
+    row: number,
+    col: number,
+    currentShots: Shot[],
+  ): number => {
+    let confidence = 45 + Math.random() * 30;
 
-    const nearbyHits = currentShots.filter((s) => s.hit && Math.abs(s.row - row) <= 1 && Math.abs(s.col - col) <= 1)
-    confidence += nearbyHits.length * 15
+    const nearbyHits = currentShots.filter(
+      (s) => s.hit && Math.abs(s.row - row) <= 1 && Math.abs(s.col - col) <= 1,
+    );
+    confidence += nearbyHits.length * 15;
 
-    const distanceFromCenter = Math.abs(row - 3.5) + Math.abs(col - 3.5)
+    const distanceFromCenter = Math.abs(row - 3.5) + Math.abs(col - 3.5);
     if (distanceFromCenter < 3) {
-      confidence += 10
+      confidence += 10;
     }
 
-    return Math.min(98, Math.round(confidence))
-  }
+    return Math.min(98, Math.round(confidence));
+  };
 
   const saveBattle = useCallback(async () => {
     // Prepare moves data for learning
@@ -165,24 +172,24 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
         modelB: aiModel2,
         accuracyA: calculateAccuracy(shots1),
         accuracyB: calculateAccuracy(shots2),
-        hitsA: shots1.filter(s => s.hit).length,
-        hitsB: shots2.filter(s => s.hit).length,
-        missesA: shots1.filter(s => !s.hit).length,
-        missesB: shots2.filter(s => !s.hit).length,
+        hitsA: shots1.filter((s) => s.hit).length,
+        hitsB: shots2.filter((s) => s.hit).length,
+        missesA: shots1.filter((s) => !s.hit).length,
+        missesB: shots2.filter((s) => !s.hit).length,
         winner: winner === 1 ? aiModel1 : aiModel2,
         moves: allMoves,
-      })
+      }),
     });
   }, [aiModel1, aiModel2, shots1, shots2, winner]);
 
   useEffect(() => {
-    if (gameOver || isThinking) return
+    if (gameOver || isThinking) return;
 
     const makeMove = async () => {
-      setIsThinking(true)
-      const targetShips = currentPlayer === 1 ? ships2 : ships1
-      const currentShots = currentPlayer === 1 ? shots1 : shots2
-      const currentModel = currentPlayer === 1 ? aiModel1 : aiModel2
+      setIsThinking(true);
+      const targetShips = currentPlayer === 1 ? ships2 : ships1;
+      const currentShots = currentPlayer === 1 ? shots1 : shots2;
+      const currentModel = currentPlayer === 1 ? aiModel1 : aiModel2;
 
       try {
         const response = await fetch("/api/ai-move", {
@@ -199,36 +206,39 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
             })),
             gridSize: 8,
           }),
-        })
+        });
 
         if (!response.ok) {
-          throw new Error(`API error: ${response.status}`)
+          throw new Error(`API error: ${response.status}`);
         }
 
-        const data = await response.json()
-        let row = data.row
-        let col = data.col
+        const data = await response.json();
+        let row = data.row;
+        let col = data.col;
 
         if (
           row === undefined ||
           col === undefined ||
           currentShots.some((s) => s.row === row && s.col === col)
         ) {
-          let attempts = 0
+          let attempts = 0;
           do {
-            row = Math.floor(Math.random() * 8)
-            col = Math.floor(Math.random() * 8)
-            attempts++
-          } while (attempts < 100 && currentShots.some((s) => s.row === row && s.col === col))
+            row = Math.floor(Math.random() * 8);
+            col = Math.floor(Math.random() * 8);
+            attempts++;
+          } while (
+            attempts < 100 &&
+            currentShots.some((s) => s.row === row && s.col === col)
+          );
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 300))
+        await new Promise((resolve) => setTimeout(resolve, 300));
 
         const hit = targetShips.some((ship) =>
-          ship.cells.some((cell) => cell.row === row && cell.col === col)
-        )
+          ship.cells.some((cell) => cell.row === row && cell.col === col),
+        );
 
-        const confidence = calculateConfidence(row, col, currentShots)
+        const confidence = calculateConfidence(row, col, currentShots);
 
         const newShot: Shot = {
           row,
@@ -238,79 +248,98 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
           confidence,
           wasFollowUp: data.wasFollowUp || false,
           previousHits: data.previousHits || [],
-        }
+        };
 
         if (currentPlayer === 1) {
-          const newShots = [...shots1, newShot]
-          setShots1(newShots)
-          const totalCells = getTotalShipCells(ships2)
-          const hits = newShots.filter((s) => s.hit).length
+          const newShots = [...shots1, newShot];
+          setShots1(newShots);
+          const totalCells = getTotalShipCells(ships2);
+          const hits = newShots.filter((s) => s.hit).length;
           if (hits === totalCells) {
-            setGameOver(true)
-            setWinner(1)
+            setGameOver(true);
+            setWinner(1);
           }
         } else {
-          const newShots = [...shots2, newShot]
-          setShots2(newShots)
-          const totalCells = getTotalShipCells(ships1)
-          const hits = newShots.filter((s) => s.hit).length
+          const newShots = [...shots2, newShot];
+          setShots2(newShots);
+          const totalCells = getTotalShipCells(ships1);
+          const hits = newShots.filter((s) => s.hit).length;
           if (hits === totalCells) {
-            setGameOver(true)
-            setWinner(2)
+            setGameOver(true);
+            setWinner(2);
           }
         }
 
-        setCurrentPlayer(currentPlayer === 1 ? 2 : 1)
+        setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
       } catch (error) {
-        console.error("Error making AI move:", error)
-        let row: number, col: number
-        let attempts = 0
+        console.error("Error making AI move:", error);
+        let row: number, col: number;
+        let attempts = 0;
         do {
-          row = Math.floor(Math.random() * 8)
-          col = Math.floor(Math.random() * 8)
-          attempts++
-        } while (attempts < 100 && currentShots.some((s) => s.row === row && s.col === col))
+          row = Math.floor(Math.random() * 8);
+          col = Math.floor(Math.random() * 8);
+          attempts++;
+        } while (
+          attempts < 100 &&
+          currentShots.some((s) => s.row === row && s.col === col)
+        );
 
         const hit = targetShips.some((ship) =>
-          ship.cells.some((cell) => cell.row === row && cell.col === col)
-        )
+          ship.cells.some((cell) => cell.row === row && cell.col === col),
+        );
 
-        const confidence = calculateConfidence(row, col, currentShots)
+        const confidence = calculateConfidence(row, col, currentShots);
 
-        const newShot: Shot = { row, col, hit, player: currentPlayer, confidence }
+        const newShot: Shot = {
+          row,
+          col,
+          hit,
+          player: currentPlayer,
+          confidence,
+        };
 
         if (currentPlayer === 1) {
-          const newShots = [...shots1, newShot]
-          setShots1(newShots)
-          const totalCells = getTotalShipCells(ships2)
-          const hits = newShots.filter((s) => s.hit).length
+          const newShots = [...shots1, newShot];
+          setShots1(newShots);
+          const totalCells = getTotalShipCells(ships2);
+          const hits = newShots.filter((s) => s.hit).length;
           if (hits === totalCells) {
-            setGameOver(true)
-            setWinner(1)
+            setGameOver(true);
+            setWinner(1);
           }
         } else {
-          const newShots = [...shots2, newShot]
-          setShots2(newShots)
-          const totalCells = getTotalShipCells(ships1)
-          const hits = newShots.filter((s) => s.hit).length
+          const newShots = [...shots2, newShot];
+          setShots2(newShots);
+          const totalCells = getTotalShipCells(ships1);
+          const hits = newShots.filter((s) => s.hit).length;
           if (hits === totalCells) {
-            setGameOver(true)
-            setWinner(2)
+            setGameOver(true);
+            setWinner(2);
           }
         }
 
-        setCurrentPlayer(currentPlayer === 1 ? 2 : 1)
+        setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
       } finally {
-        setIsThinking(false)
+        setIsThinking(false);
       }
-    }
+    };
 
     const timer = setTimeout(() => {
-      makeMove()
-    }, 300)
+      makeMove();
+    }, 300);
 
-    return () => clearTimeout(timer)
-  }, [currentPlayer, gameOver, ships1, ships2, shots1, shots2, aiModel1, aiModel2, isThinking])
+    return () => clearTimeout(timer);
+  }, [
+    currentPlayer,
+    gameOver,
+    ships1,
+    ships2,
+    shots1,
+    shots2,
+    aiModel1,
+    aiModel2,
+    isThinking,
+  ]);
 
   useEffect(() => {
     if (gameOver && winner) {
@@ -318,28 +347,44 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
     }
   }, [gameOver, winner, saveBattle]);
 
-  const updatedShips1 = updateSunkShips(ships1, shots2)
-  const updatedShips2 = updateSunkShips(ships2, shots1)
+  const updatedShips1 = updateSunkShips(ships1, shots2);
+  const updatedShips2 = updateSunkShips(ships2, shots1);
 
   const renderShotLog = (shots: Shot[]) => (
     <div className="h-[150px] w-full rounded border border-primary/30 p-2 bg-card/50 overflow-y-auto">
       <div className="space-y-1">
         {shots.length === 0 ? (
-          <p className="text-center text-muted-foreground text-xs py-2">ESPERANDO...</p>
+          <p className="text-center text-muted-foreground text-xs py-2">
+            ESPERANDO...
+          </p>
         ) : (
           shots.map((shot, index) => (
-            <div key={index} className="flex items-center justify-between p-1.5 rounded bg-muted/30 text-xs">
+            <div
+              key={index}
+              className="flex items-center justify-between p-1.5 rounded bg-muted/30 text-xs"
+            >
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-muted-foreground">#{index + 1}</span>
-                <Badge variant="outline" className="font-mono text-[10px] px-1 py-0">
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  #{index + 1}
+                </span>
+                <Badge
+                  variant="outline"
+                  className="font-mono text-[10px] px-1 py-0"
+                >
                   {COLUMNS[shot.col]}
                   {shot.row + 1}
                 </Badge>
-                <span className="text-[9px] text-primary/80 font-mono">{shot.confidence}%</span>
+                <span className="text-[9px] text-primary/80 font-mono">
+                  {shot.confidence}%
+                </span>
               </div>
               <Badge
                 variant={shot.hit ? "default" : "secondary"}
-                className={shot.hit ? "bg-hit text-[10px] px-1 py-0" : "bg-miss text-[10px] px-1 py-0"}
+                className={
+                  shot.hit
+                    ? "bg-hit text-[10px] px-1 py-0"
+                    : "bg-miss text-[10px] px-1 py-0"
+                }
               >
                 {shot.hit ? "HIT" : "MISS"}
               </Badge>
@@ -348,7 +393,7 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
         )}
       </div>
     </div>
-  )
+  );
 
   return (
     <div className="min-h-screen p-8 monitor-frame">
@@ -358,8 +403,8 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
             <div className="flex justify-start">
               <Button
                 onClick={() => {
-                  playClick()
-                  onBackToMenu()
+                  playClick();
+                  onBackToMenu();
                 }}
                 variant="outline"
                 size="sm"
@@ -373,7 +418,9 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
           <h1 className="text-3xl md:text-4xl font-bold text-balance text-glow uppercase tracking-wider">
             [ BATALLA NAVAL IA ]
           </h1>
-          <p className="text-muted-foreground text-sm uppercase tracking-wide">Sistema de Combate Terminal v2.0</p>
+          <p className="text-muted-foreground text-sm uppercase tracking-wide">
+            Sistema de Combate Terminal v2.0
+          </p>
         </div>
 
         {gameOver && winner && (
@@ -395,17 +442,26 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
                 <h2 className="text-lg font-bold flex items-center gap-2 text-glow uppercase">
                   [{aiModel1}]
                   {currentPlayer === 1 && !gameOver && (
-                    <Badge variant="default" className="animate-pulse text-[10px] px-1 py-0">
+                    <Badge
+                      variant="default"
+                      className="animate-pulse text-[10px] px-1 py-0"
+                    >
                       <Target className="h-2 w-2 mr-1" />
                       {isThinking ? "PENSANDO..." : "ACTIVO"}
                     </Badge>
                   )}
                 </h2>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">JUGADOR_01</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  JUGADOR_01
+                </p>
               </div>
               <div className="text-right">
-                <div className="text-xl font-bold text-glow">{calculateAccuracy(shots1)}%</div>
-                <div className="text-[9px] text-muted-foreground uppercase">PRECISION</div>
+                <div className="text-xl font-bold text-glow">
+                  {calculateAccuracy(shots1)}%
+                </div>
+                <div className="text-[9px] text-muted-foreground uppercase">
+                  PRECISION
+                </div>
               </div>
             </div>
             <div className="flex justify-center">
@@ -416,7 +472,8 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
                 <div className="flex items-center gap-1.5">
                   <div className="h-3 w-3 rounded bg-hit" />
                   <span>
-                    IMPACTOS: {shots1.filter((s) => s.hit).length}/{getTotalShipCells(ships2)}
+                    IMPACTOS: {shots1.filter((s) => s.hit).length}/
+                    {getTotalShipCells(ships2)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -442,17 +499,26 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
                 <h2 className="text-lg font-bold flex items-center gap-2 text-glow uppercase">
                   [{aiModel2}]
                   {currentPlayer === 2 && !gameOver && (
-                    <Badge variant="default" className="animate-pulse text-[10px] px-1 py-0">
+                    <Badge
+                      variant="default"
+                      className="animate-pulse text-[10px] px-1 py-0"
+                    >
                       <Target className="h-2 w-2 mr-1" />
                       {isThinking ? "PENSANDO..." : "ACTIVO"}
                     </Badge>
                   )}
                 </h2>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">JUGADOR_02</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  JUGADOR_02
+                </p>
               </div>
               <div className="text-right">
-                <div className="text-xl font-bold text-glow">{calculateAccuracy(shots2)}%</div>
-                <div className="text-[9px] text-muted-foreground uppercase">PRECISION</div>
+                <div className="text-xl font-bold text-glow">
+                  {calculateAccuracy(shots2)}%
+                </div>
+                <div className="text-[9px] text-muted-foreground uppercase">
+                  PRECISION
+                </div>
               </div>
             </div>
             <div className="flex justify-center">
@@ -463,7 +529,8 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
                 <div className="flex items-center gap-1.5">
                   <div className="h-3 w-3 rounded bg-hit" />
                   <span>
-                    IMPACTOS: {shots2.filter((s) => s.hit).length}/{getTotalShipCells(ships1)}
+                    IMPACTOS: {shots2.filter((s) => s.hit).length}/
+                    {getTotalShipCells(ships1)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -485,5 +552,5 @@ export function BattleField({ aiModel1, aiModel2, onBackToMenu }: BattleFieldPro
         </div>
       </div>
     </div>
-  )
+  );
 }
