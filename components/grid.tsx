@@ -90,99 +90,102 @@ export function Grid({
   };
 
   return (
-    <div className="inline-block">
-      <div className="grid grid-cols-9 gap-0.5 mb-0.5">
-        <div className="w-7 h-7" />
-        {COLUMNS.map((col) => (
-          <div
-            key={col}
-            className="w-7 h-7 flex items-center justify-center text-[10px] font-bold text-primary uppercase"
-          >
-            {col}
+    <div className="perspective-container">
+      <div className="board-3d inline-block">
+        <div className="grid grid-cols-9 gap-0.5 mb-0.5">
+          <div className="w-7 h-7" />
+          {COLUMNS.map((col) => (
+            <div
+              key={col}
+              className="w-7 h-7 flex items-center justify-center text-[10px] font-bold text-primary uppercase"
+            >
+              {col}
+            </div>
+          ))}
+        </div>
+
+        {Array.from({ length: 8 }).map((_, rowIndex) => (
+          <div key={rowIndex} className="grid grid-cols-9 gap-0.5 mb-0.5">
+            {/* Row header */}
+            <div className="w-7 h-7 flex items-center justify-center text-[10px] font-bold text-primary">
+              {rowIndex + 1}
+            </div>
+
+            {/* Cells */}
+            {Array.from({ length: 8 }).map((_, colIndex) => {
+              const status = getCellStatus(rowIndex, colIndex);
+              const ship = getShipAtCell(rowIndex, colIndex);
+              const hasShip = !!ship;
+              const probability = getProbability(rowIndex, colIndex);
+              const showProbability =
+                showHeatmap && status === "empty" && probability > 0;
+
+              return (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  className={cn(
+                    "w-7 h-7 border transition-all duration-200 relative cell-3d",
+                    status === "empty" &&
+                      !hasShip &&
+                      !showProbability &&
+                      "bg-card/30 border-primary/20",
+                    status === "empty" &&
+                      hasShip &&
+                      showShips &&
+                      "border-primary/40 cell-elevated",
+                    status === "hit" &&
+                      "bg-hit border-hit animate-pulse cell-hit-3d",
+                    status === "miss" &&
+                      "bg-miss border-miss/50 opacity-50 cell-miss-3d",
+                    ship?.sunk && "opacity-30",
+                  )}
+                  style={{
+                    backgroundColor: showProbability
+                      ? getProbabilityColor(probability)
+                      : status === "empty" && hasShip && showShips
+                        ? ship.color + "40"
+                        : undefined,
+                    borderColor: showProbability
+                      ? probability > 0.5
+                        ? "rgba(255, 255, 255, 0.3)"
+                        : "rgba(255, 255, 255, 0.1)"
+                      : status === "empty" && hasShip && showShips
+                        ? ship.color
+                        : undefined,
+                    boxShadow:
+                      showProbability && probability > 0.7
+                        ? `0 0 8px ${getProbabilityColor(probability)}, inset 0 0 4px rgba(255,255,255,0.2)`
+                        : status === "empty" && hasShip && showShips
+                          ? `0 0 8px ${ship.color}60, inset 0 0 8px ${ship.color}30, 0 4px 6px rgba(0,0,0,0.5)`
+                          : undefined,
+                  }}
+                >
+                  {/* Probability percentage */}
+                  {showProbability && probability > 0.1 && (
+                    <div
+                      className="absolute inset-0 flex items-center justify-center text-[8px] font-bold"
+                      style={{ color: getProbabilityTextColor(probability) }}
+                    >
+                      {Math.round(probability * 100)}
+                    </div>
+                  )}
+
+                  {status === "hit" && (
+                    <div className="w-full h-full flex items-center justify-center text-primary-foreground font-bold text-xs">
+                      ×
+                    </div>
+                  )}
+                  {status === "miss" && (
+                    <div className="w-full h-full flex items-center justify-center text-foreground/50 text-xs">
+                      ·
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
-
-      {Array.from({ length: 8 }).map((_, rowIndex) => (
-        <div key={rowIndex} className="grid grid-cols-9 gap-0.5 mb-0.5">
-          {/* Row header */}
-          <div className="w-7 h-7 flex items-center justify-center text-[10px] font-bold text-primary">
-            {rowIndex + 1}
-          </div>
-
-          {/* Cells */}
-          {Array.from({ length: 8 }).map((_, colIndex) => {
-            const status = getCellStatus(rowIndex, colIndex);
-            const ship = getShipAtCell(rowIndex, colIndex);
-            const hasShip = !!ship;
-            const probability = getProbability(rowIndex, colIndex);
-            const showProbability =
-              showHeatmap && status === "empty" && probability > 0;
-
-            return (
-              <div
-                key={`${rowIndex}-${colIndex}`}
-                className={cn(
-                  "w-7 h-7 border transition-all duration-200 relative",
-                  status === "empty" &&
-                    !hasShip &&
-                    !showProbability &&
-                    "bg-card/30 border-primary/20",
-                  status === "empty" &&
-                    hasShip &&
-                    showShips &&
-                    "border-primary/40",
-                  status === "hit" &&
-                    "bg-hit border-hit animate-pulse shadow-[0_0_10px_rgba(255,100,0,0.5)]",
-                  status === "miss" && "bg-miss border-miss/50 opacity-50",
-                  ship?.sunk && "opacity-30",
-                )}
-                style={{
-                  backgroundColor: showProbability
-                    ? getProbabilityColor(probability)
-                    : status === "empty" && hasShip && showShips
-                      ? ship.color + "40"
-                      : undefined,
-                  borderColor: showProbability
-                    ? probability > 0.5
-                      ? "rgba(255, 255, 255, 0.3)"
-                      : "rgba(255, 255, 255, 0.1)"
-                    : status === "empty" && hasShip && showShips
-                      ? ship.color
-                      : undefined,
-                  boxShadow:
-                    showProbability && probability > 0.7
-                      ? `0 0 8px ${getProbabilityColor(probability)}, inset 0 0 4px rgba(255,255,255,0.2)`
-                      : status === "empty" && hasShip && showShips
-                        ? `0 0 8px ${ship.color}60, inset 0 0 8px ${ship.color}30`
-                        : undefined,
-                }}
-              >
-                {/* Probability percentage */}
-                {showProbability && probability > 0.1 && (
-                  <div
-                    className="absolute inset-0 flex items-center justify-center text-[8px] font-bold"
-                    style={{ color: getProbabilityTextColor(probability) }}
-                  >
-                    {Math.round(probability * 100)}
-                  </div>
-                )}
-
-                {status === "hit" && (
-                  <div className="w-full h-full flex items-center justify-center text-primary-foreground font-bold text-xs">
-                    ×
-                  </div>
-                )}
-                {status === "miss" && (
-                  <div className="w-full h-full flex items-center justify-center text-foreground/50 text-xs">
-                    ·
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ))}
     </div>
   );
 }

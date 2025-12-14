@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Brain, ArrowLeft } from "lucide-react";
+import { Brain } from "lucide-react";
 import { useClickSound } from "@/hooks/useClickSound";
 
 const AI_MODELS = [
@@ -41,10 +41,10 @@ const AI_MODELS = [
 
 interface AISelectorProps {
   onStart: (model1: string, model2: string) => void;
-  onBack: () => void;
+  onRanking: () => void;
 }
 
-export function AISelector({ onStart, onBack }: AISelectorProps) {
+export function AISelector({ onStart, onRanking }: AISelectorProps) {
   const [model1, setModel1] = useState("");
   const [model2, setModel2] = useState("");
   const { playClick } = useClickSound();
@@ -153,13 +153,12 @@ export function AISelector({ onStart, onBack }: AISelectorProps) {
             <Button
               onClick={() => {
                 playClick();
-                onBack();
+                onRanking();
               }}
               variant="outline"
               className="w-full h-10 font-bold uppercase tracking-wider border-green-600 text-green-400 hover:bg-green-950"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Menu
+              [ Ranking ]
             </Button>
           </div>
         </div>
