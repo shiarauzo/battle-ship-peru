@@ -21,6 +21,8 @@ interface GridProps {
   showShips?: boolean;
   heatmap?: number[][]; // 8x8 probability grid (0-1)
   showHeatmap?: boolean;
+  onCellClick?: (row: number, col: number) => void;
+  isClickable?: boolean;
 }
 
 const COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "H"];
@@ -58,6 +60,8 @@ export function Grid({
   showShips = false,
   heatmap,
   showHeatmap = false,
+  onCellClick,
+  isClickable = false,
 }: GridProps) {
   const getCellStatus = (row: number, col: number) => {
     const shot = shots.find((s) => s.row === row && s.col === col);
@@ -76,6 +80,13 @@ export function Grid({
   const getProbability = (row: number, col: number): number => {
     if (!heatmap || !heatmap[row]) return 0;
     return heatmap[row][col] || 0;
+  };
+
+  const handleCellClick = (row: number, col: number) => {
+    if (!isClickable || !onCellClick) return;
+    const status = getCellStatus(row, col);
+    if (status !== "empty") return; // Can't click already shot cells
+    onCellClick(row, col);
   };
 
   return (
@@ -121,10 +132,12 @@ export function Grid({
                 const probability = getProbability(rowIndex, colIndex);
                 const showProbability =
                   showHeatmap && status === "empty" && probability > 0;
+                const canClick = isClickable && status === "empty";
 
                 return (
                   <div
                     key={`${rowIndex}-${colIndex}`}
+                    onClick={() => handleCellClick(rowIndex, colIndex)}
                     className={cn(
                       "w-8 h-8 relative cell-3d transition-all duration-200",
                       status === "empty" &&
@@ -138,6 +151,8 @@ export function Grid({
                       status === "hit" && "hit-marker cell-hit-3d",
                       status === "miss" && "miss-marker cell-miss-3d",
                       ship?.sunk && "opacity-40",
+                      canClick &&
+                        "cursor-crosshair hover:bg-cyan-500/30 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(0,200,255,0.5)]",
                     )}
                     style={{
                       backgroundColor: showProbability

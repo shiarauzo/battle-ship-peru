@@ -11,6 +11,7 @@ import {
   Flame,
   Anchor,
   Crosshair,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useClickSound } from "@/hooks/useClickSound";
@@ -112,6 +113,10 @@ export function BattleField({
   const [showHeatmap1, setShowHeatmap1] = useState(true);
   const [showHeatmap2, setShowHeatmap2] = useState(true);
 
+  // Check if player 1 is human
+  const isPlayer1Human = aiModel1 === "human";
+  const isPlayer2Human = aiModel2 === "human";
+
   const updateSunkShips = (ships: Ship[], shots: Shot[]): Ship[] => {
     return ships.map((ship) => {
       const allCellsHit = ship.cells.every((cell) =>
@@ -158,6 +163,74 @@ export function BattleField({
     return Math.min(98, Math.round(confidence));
   };
 
+  // Handle human player click
+  const handleHumanShot = useCallback(
+    (row: number, col: number) => {
+      if (gameOver || isThinking) return;
+
+      const isHumanTurn =
+        (currentPlayer === 1 && isPlayer1Human) ||
+        (currentPlayer === 2 && isPlayer2Human);
+      if (!isHumanTurn) return;
+
+      playClick();
+
+      const targetShips = currentPlayer === 1 ? ships2 : ships1;
+      const currentShots = currentPlayer === 1 ? shots1 : shots2;
+
+      // Check if already shot here
+      if (currentShots.some((s) => s.row === row && s.col === col)) return;
+
+      const hit = targetShips.some((ship) =>
+        ship.cells.some((cell) => cell.row === row && cell.col === col),
+      );
+
+      const newShot: Shot = {
+        row,
+        col,
+        hit,
+        player: currentPlayer,
+        confidence: 100, // Human confidence is always 100%
+      };
+
+      if (currentPlayer === 1) {
+        const newShots = [...shots1, newShot];
+        setShots1(newShots);
+        const totalCells = getTotalShipCells(ships2);
+        const hits = newShots.filter((s) => s.hit).length;
+        if (hits === totalCells) {
+          setGameOver(true);
+          setWinner(1);
+          return;
+        }
+      } else {
+        const newShots = [...shots2, newShot];
+        setShots2(newShots);
+        const totalCells = getTotalShipCells(ships1);
+        const hits = newShots.filter((s) => s.hit).length;
+        if (hits === totalCells) {
+          setGameOver(true);
+          setWinner(2);
+          return;
+        }
+      }
+
+      setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
+    },
+    [
+      currentPlayer,
+      gameOver,
+      isThinking,
+      isPlayer1Human,
+      isPlayer2Human,
+      ships1,
+      ships2,
+      shots1,
+      shots2,
+      playClick,
+    ],
+  );
+
   const saveBattle = useCallback(async () => {
     const allMoves = [
       ...shots1.map((shot, idx) => ({
@@ -200,6 +273,12 @@ export function BattleField({
 
   useEffect(() => {
     if (gameOver || isThinking) return;
+
+    // Check if current player is human - if so, don't auto-move
+    const isCurrentPlayerHuman =
+      (currentPlayer === 1 && isPlayer1Human) ||
+      (currentPlayer === 2 && isPlayer2Human);
+    if (isCurrentPlayerHuman) return;
 
     const makeMove = async () => {
       setIsThinking(true);
@@ -368,6 +447,8 @@ export function BattleField({
     aiModel1,
     aiModel2,
     isThinking,
+    isPlayer1Human,
+    isPlayer2Human,
   ]);
 
   useEffect(() => {
@@ -379,12 +460,18 @@ export function BattleField({
   const updatedShips1 = updateSunkShips(ships1, shots2);
   const updatedShips2 = updateSunkShips(ships2, shots1);
 
-  const renderShotLog = (shots: Shot[]) => (
+  // Determine if player 1's grid should be clickable (when it's human's turn to attack enemy grid)
+  const isPlayer1GridClickable =
+    currentPlayer === 1 && isPlayer1Human && !gameOver && !isThinking;
+  const isPlayer2GridClickable =
+    currentPlayer === 2 && isPlayer2Human && !gameOver && !isThinking;
+
+  const renderShotLog = (shots: Shot[], isHuman: boolean) => (
     <div className="h-[120px] w-full rounded border border-cyan-700/40 p-2 bg-black/40 overflow-y-auto">
       <div className="space-y-1">
         {shots.length === 0 ? (
           <p className="text-center text-muted-foreground text-xs py-2">
-            WAITING...
+            {isHuman ? "CLICK TO ATTACK..." : "WAITING..."}
           </p>
         ) : (
           shots.slice(-10).map((shot, index) => (
@@ -403,9 +490,11 @@ export function BattleField({
                   {COLUMNS[shot.col]}
                   {shot.row + 1}
                 </Badge>
-                <span className="text-[9px] text-cyan-400/80 font-mono">
-                  {shot.confidence}%
-                </span>
+                {!isHuman && (
+                  <span className="text-[9px] text-cyan-400/80 font-mono">
+                    {shot.confidence}%
+                  </span>
+                )}
               </div>
               <Badge
                 variant={shot.hit ? "default" : "secondary"}
@@ -423,6 +512,11 @@ export function BattleField({
       </div>
     </div>
   );
+
+  const getPlayerDisplayName = (model: string) => {
+    if (model === "human") return "Human";
+    return model;
+  };
 
   return (
     <div className="min-h-screen p-8 monitor-frame hex-pattern">
@@ -444,12 +538,14 @@ export function BattleField({
             </div>
           )}
           <h1 className="text-3xl md:text-4xl font-bold text-balance text-glow uppercase tracking-wider flex items-center justify-center gap-3">
-            <Anchor className="h-8 w-8" />
-            [ NAVAL BATTLE AI ]
+            <Anchor className="h-8 w-8" />[ NAVAL BATTLE{" "}
+            {isPlayer1Human || isPlayer2Human ? "" : "AI"} ]
             <Anchor className="h-8 w-8" />
           </h1>
           <p className="text-cyan-400/70 text-sm uppercase tracking-wide">
-            Combat Terminal System v3.0 - Probabilistic AI + Q-Learning
+            {isPlayer1Human
+              ? "Human vs AI - Click on the grid to attack!"
+              : "Combat Terminal System v3.0 - Probabilistic AI + Q-Learning"}
           </p>
         </div>
 
@@ -458,9 +554,24 @@ export function BattleField({
             <div className="flex items-center justify-center gap-3">
               <Trophy className="h-6 w-6 text-yellow-400" />
               <h2 className="text-xl font-bold text-glow uppercase">
-                &gt;&gt; {winner === 1 ? aiModel1 : aiModel2} VICTORY &lt;&lt;
+                &gt;&gt;{" "}
+                {getPlayerDisplayName(winner === 1 ? aiModel1 : aiModel2)}{" "}
+                VICTORY &lt;&lt;
               </h2>
               <Trophy className="h-6 w-6 text-yellow-400" />
+            </div>
+          </Card>
+        )}
+
+        {/* Human turn indicator */}
+        {isPlayer1Human && currentPlayer === 1 && !gameOver && (
+          <Card className="p-3 bg-yellow-900/30 text-yellow-300 border-yellow-600/50 card-relief">
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <User className="h-4 w-4" />
+              <span className="uppercase font-bold">
+                Your Turn - Click on the enemy grid to fire!
+              </span>
+              <Crosshair className="h-4 w-4 animate-pulse" />
             </div>
           </Card>
         )}
@@ -471,19 +582,28 @@ export function BattleField({
             <div className="flex items-center justify-between border-b border-cyan-700/40 pb-2">
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2 text-glow uppercase">
-                  <Crosshair className="h-4 w-4" />[{aiModel1}]
+                  {isPlayer1Human ? (
+                    <User className="h-4 w-4" />
+                  ) : (
+                    <Crosshair className="h-4 w-4" />
+                  )}
+                  [{getPlayerDisplayName(aiModel1)}]
                   {currentPlayer === 1 && !gameOver && (
                     <Badge
                       variant="default"
-                      className="animate-pulse text-[10px] px-1.5 py-0 bg-cyan-600"
+                      className={`animate-pulse text-[10px] px-1.5 py-0 ${isPlayer1Human ? "bg-yellow-600" : "bg-cyan-600"}`}
                     >
                       <Target className="h-2 w-2 mr-1" />
-                      {isThinking ? "THINKING..." : "ACTIVE"}
+                      {isPlayer1Human
+                        ? "YOUR TURN"
+                        : isThinking
+                          ? "THINKING..."
+                          : "ACTIVE"}
                     </Badge>
                   )}
                 </h2>
                 <p className="text-[10px] text-cyan-500/70 uppercase tracking-wide">
-                  PLAYER_01
+                  PLAYER_01 {isPlayer1Human && "(YOU)"}
                 </p>
               </div>
               <div className="text-right">
@@ -496,36 +616,42 @@ export function BattleField({
               </div>
             </div>
 
-            {/* Heatmap Toggle */}
-            <div className="flex items-center justify-between">
-              <Button
-                onClick={() => {
-                  playClick();
-                  setShowHeatmap1(!showHeatmap1);
-                }}
-                variant={showHeatmap1 ? "default" : "outline"}
-                size="sm"
-                className={`text-[10px] h-6 ${
-                  showHeatmap1
-                    ? "bg-orange-600 hover:bg-orange-700 border-orange-500"
-                    : "border-orange-600 text-orange-400 hover:bg-orange-950"
-                }`}
-              >
-                <Flame className="h-3 w-3 mr-1" />
-                HEATMAP
-              </Button>
-              <div className="text-[9px] text-cyan-500/70">
-                {heatmap1 ? "PROBABILISTIC AI" : "LOADING..."}
+            {/* Heatmap Toggle - Only show for AI players */}
+            {!isPlayer1Human && (
+              <div className="flex items-center justify-between">
+                <Button
+                  onClick={() => {
+                    playClick();
+                    setShowHeatmap1(!showHeatmap1);
+                  }}
+                  variant={showHeatmap1 ? "default" : "outline"}
+                  size="sm"
+                  className={`text-[10px] h-6 ${
+                    showHeatmap1
+                      ? "bg-orange-600 hover:bg-orange-700 border-orange-500"
+                      : "border-orange-600 text-orange-400 hover:bg-orange-950"
+                  }`}
+                >
+                  <Flame className="h-3 w-3 mr-1" />
+                  HEATMAP
+                </Button>
+                <div className="text-[9px] text-cyan-500/70">
+                  {heatmap1 ? "PROBABILISTIC AI" : "LOADING..."}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-center">
               <Grid
                 ships={updatedShips2}
                 shots={shots1}
-                showShips={true}
-                heatmap={heatmap1}
-                showHeatmap={showHeatmap1}
+                showShips={!isPlayer1Human || gameOver}
+                heatmap={isPlayer1Human ? undefined : heatmap1}
+                showHeatmap={!isPlayer1Human && showHeatmap1}
+                onCellClick={
+                  isPlayer1GridClickable ? handleHumanShot : undefined
+                }
+                isClickable={isPlayer1GridClickable}
               />
             </div>
             <div className="space-y-2 border-t border-cyan-700/40 pt-2">
@@ -554,7 +680,7 @@ export function BattleField({
                 <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-cyan-400">
                   &gt; SHOT LOG
                 </h3>
-                {renderShotLog(shots1)}
+                {renderShotLog(shots1, isPlayer1Human)}
               </div>
             </div>
           </Card>
@@ -564,19 +690,28 @@ export function BattleField({
             <div className="flex items-center justify-between border-b border-cyan-700/40 pb-2">
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2 text-glow uppercase">
-                  <Crosshair className="h-4 w-4" />[{aiModel2}]
+                  {isPlayer2Human ? (
+                    <User className="h-4 w-4" />
+                  ) : (
+                    <Crosshair className="h-4 w-4" />
+                  )}
+                  [{getPlayerDisplayName(aiModel2)}]
                   {currentPlayer === 2 && !gameOver && (
                     <Badge
                       variant="default"
-                      className="animate-pulse text-[10px] px-1.5 py-0 bg-cyan-600"
+                      className={`animate-pulse text-[10px] px-1.5 py-0 ${isPlayer2Human ? "bg-yellow-600" : "bg-cyan-600"}`}
                     >
                       <Target className="h-2 w-2 mr-1" />
-                      {isThinking ? "THINKING..." : "ACTIVE"}
+                      {isPlayer2Human
+                        ? "YOUR TURN"
+                        : isThinking
+                          ? "THINKING..."
+                          : "ACTIVE"}
                     </Badge>
                   )}
                 </h2>
                 <p className="text-[10px] text-cyan-500/70 uppercase tracking-wide">
-                  PLAYER_02
+                  PLAYER_02 {isPlayer2Human && "(YOU)"}
                 </p>
               </div>
               <div className="text-right">
@@ -589,36 +724,42 @@ export function BattleField({
               </div>
             </div>
 
-            {/* Heatmap Toggle */}
-            <div className="flex items-center justify-between">
-              <Button
-                onClick={() => {
-                  playClick();
-                  setShowHeatmap2(!showHeatmap2);
-                }}
-                variant={showHeatmap2 ? "default" : "outline"}
-                size="sm"
-                className={`text-[10px] h-6 ${
-                  showHeatmap2
-                    ? "bg-orange-600 hover:bg-orange-700 border-orange-500"
-                    : "border-orange-600 text-orange-400 hover:bg-orange-950"
-                }`}
-              >
-                <Flame className="h-3 w-3 mr-1" />
-                HEATMAP
-              </Button>
-              <div className="text-[9px] text-cyan-500/70">
-                {heatmap2 ? "PROBABILISTIC AI" : "LOADING..."}
+            {/* Heatmap Toggle - Only show for AI players */}
+            {!isPlayer2Human && (
+              <div className="flex items-center justify-between">
+                <Button
+                  onClick={() => {
+                    playClick();
+                    setShowHeatmap2(!showHeatmap2);
+                  }}
+                  variant={showHeatmap2 ? "default" : "outline"}
+                  size="sm"
+                  className={`text-[10px] h-6 ${
+                    showHeatmap2
+                      ? "bg-orange-600 hover:bg-orange-700 border-orange-500"
+                      : "border-orange-600 text-orange-400 hover:bg-orange-950"
+                  }`}
+                >
+                  <Flame className="h-3 w-3 mr-1" />
+                  HEATMAP
+                </Button>
+                <div className="text-[9px] text-cyan-500/70">
+                  {heatmap2 ? "PROBABILISTIC AI" : "LOADING..."}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-center">
               <Grid
                 ships={updatedShips1}
                 shots={shots2}
                 showShips={true}
-                heatmap={heatmap2}
-                showHeatmap={showHeatmap2}
+                heatmap={isPlayer2Human ? undefined : heatmap2}
+                showHeatmap={!isPlayer2Human && showHeatmap2}
+                onCellClick={
+                  isPlayer2GridClickable ? handleHumanShot : undefined
+                }
+                isClickable={isPlayer2GridClickable}
               />
             </div>
             <div className="space-y-2 border-t border-cyan-700/40 pt-2">
@@ -647,55 +788,57 @@ export function BattleField({
                 <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-cyan-400">
                   &gt; SHOT LOG
                 </h3>
-                {renderShotLog(shots2)}
+                {renderShotLog(shots2, isPlayer2Human)}
               </div>
             </div>
           </Card>
         </div>
 
-        {/* Heatmap Legend */}
-        <Card className="p-3 card-relief">
-          <div className="flex items-center justify-center gap-4 text-[10px]">
-            <span className="text-cyan-400 uppercase font-semibold">
-              Heatmap Legend:
-            </span>
-            <div className="flex items-center gap-1">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(0, 100, 180, 0.5)" }}
-              />
-              <span className="text-cyan-300">0-20%</span>
+        {/* Heatmap Legend - Only show if at least one AI player */}
+        {(!isPlayer1Human || !isPlayer2Human) && (
+          <Card className="p-3 card-relief">
+            <div className="flex items-center justify-center gap-4 text-[10px]">
+              <span className="text-cyan-400 uppercase font-semibold">
+                Heatmap Legend:
+              </span>
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: "rgba(0, 100, 180, 0.5)" }}
+                />
+                <span className="text-cyan-300">0-20%</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: "rgba(0, 150, 200, 0.5)" }}
+                />
+                <span className="text-cyan-300">20-40%</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: "rgba(0, 200, 220, 0.6)" }}
+                />
+                <span className="text-cyan-300">40-60%</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: "rgba(255, 150, 50, 0.7)" }}
+                />
+                <span className="text-cyan-300">60-80%</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: "rgba(255, 80, 80, 0.9)" }}
+                />
+                <span className="text-cyan-300">80-100%</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(0, 150, 200, 0.5)" }}
-              />
-              <span className="text-cyan-300">20-40%</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(0, 200, 220, 0.6)" }}
-              />
-              <span className="text-cyan-300">40-60%</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(255, 150, 50, 0.7)" }}
-              />
-              <span className="text-cyan-300">60-80%</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(255, 80, 80, 0.9)" }}
-              />
-              <span className="text-cyan-300">80-100%</span>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
     </div>
   );
