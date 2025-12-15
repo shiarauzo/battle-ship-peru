@@ -113,9 +113,10 @@ export function BattleField({
   const [showHeatmap1, setShowHeatmap1] = useState(true);
   const [showHeatmap2, setShowHeatmap2] = useState(true);
 
-  // Check if player 1 is human
+  // Check if any player is human
   const isPlayer1Human = aiModel1 === "human";
   const isPlayer2Human = aiModel2 === "human";
+  const hasHumanPlayer = isPlayer1Human || isPlayer2Human;
 
   const updateSunkShips = (ships: Ship[], shots: Shot[]): Ship[] => {
     return ships.map((ship) => {
@@ -616,8 +617,8 @@ export function BattleField({
               </div>
             </div>
 
-            {/* Heatmap Toggle - Only show for AI players */}
-            {!isPlayer1Human && (
+            {/* Heatmap Toggle - Only show when no human player */}
+            {!hasHumanPlayer && (
               <div className="flex items-center justify-between">
                 <Button
                   onClick={() => {
@@ -642,12 +643,17 @@ export function BattleField({
             )}
 
             <div className="flex justify-center">
+              {/*
+                Player 1's grid shows ships2 (enemy ships for Player 1).
+                If Player 1 is human, hide enemy ships (only show when game is over).
+                No heatmap when human is playing.
+              */}
               <Grid
                 ships={updatedShips2}
                 shots={shots1}
                 showShips={!isPlayer1Human || gameOver}
-                heatmap={isPlayer1Human ? undefined : heatmap1}
-                showHeatmap={!isPlayer1Human && showHeatmap1}
+                heatmap={hasHumanPlayer ? undefined : heatmap1}
+                showHeatmap={!hasHumanPlayer && showHeatmap1}
                 onCellClick={
                   isPlayer1GridClickable ? handleHumanShot : undefined
                 }
@@ -724,8 +730,8 @@ export function BattleField({
               </div>
             </div>
 
-            {/* Heatmap Toggle - Only show for AI players */}
-            {!isPlayer2Human && (
+            {/* Heatmap Toggle - Only show when no human player */}
+            {!hasHumanPlayer && (
               <div className="flex items-center justify-between">
                 <Button
                   onClick={() => {
@@ -750,12 +756,17 @@ export function BattleField({
             )}
 
             <div className="flex justify-center">
+              {/*
+                Player 2's grid shows ships1 (human's ships when Player 1 is human).
+                Human can always see their own ships.
+                No heatmap when human is playing.
+              */}
               <Grid
                 ships={updatedShips1}
                 shots={shots2}
-                showShips={true}
-                heatmap={isPlayer2Human ? undefined : heatmap2}
-                showHeatmap={!isPlayer2Human && showHeatmap2}
+                showShips={isPlayer1Human || !hasHumanPlayer}
+                heatmap={hasHumanPlayer ? undefined : heatmap2}
+                showHeatmap={!hasHumanPlayer && showHeatmap2}
                 onCellClick={
                   isPlayer2GridClickable ? handleHumanShot : undefined
                 }
@@ -794,8 +805,8 @@ export function BattleField({
           </Card>
         </div>
 
-        {/* Heatmap Legend - Only show if at least one AI player */}
-        {(!isPlayer1Human || !isPlayer2Human) && (
+        {/* Heatmap Legend - Only show when no human player (AI vs AI mode) */}
+        {!hasHumanPlayer && (
           <Card className="p-3 card-relief">
             <div className="flex items-center justify-center gap-4 text-[10px]">
               <span className="text-cyan-400 uppercase font-semibold">
