@@ -26,41 +26,30 @@ interface GridProps {
 const COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 // Convert probability (0-1) to color
-// 0.0-0.2  → Blue (low probability)
-// 0.2-0.4  → Cyan
-// 0.4-0.6  → Yellow
-// 0.6-0.8  → Orange
-// 0.8-1.0  → Red (high probability)
 function getProbabilityColor(probability: number): string {
   if (probability <= 0.2) {
-    // Blue: rgb(59, 130, 246)
     const intensity = probability / 0.2;
-    return `rgba(59, 130, 246, ${0.3 + intensity * 0.3})`;
+    return `rgba(0, 100, 180, ${0.3 + intensity * 0.3})`;
   } else if (probability <= 0.4) {
-    // Cyan: rgb(6, 182, 212)
     const intensity = (probability - 0.2) / 0.2;
-    return `rgba(6, 182, 212, ${0.4 + intensity * 0.2})`;
+    return `rgba(0, 150, 200, ${0.4 + intensity * 0.2})`;
   } else if (probability <= 0.6) {
-    // Yellow: rgb(234, 179, 8)
     const intensity = (probability - 0.4) / 0.2;
-    return `rgba(234, 179, 8, ${0.5 + intensity * 0.2})`;
+    return `rgba(0, 200, 220, ${0.5 + intensity * 0.2})`;
   } else if (probability <= 0.8) {
-    // Orange: rgb(249, 115, 22)
     const intensity = (probability - 0.6) / 0.2;
-    return `rgba(249, 115, 22, ${0.6 + intensity * 0.2})`;
+    return `rgba(255, 150, 50, ${0.6 + intensity * 0.2})`;
   } else {
-    // Red: rgb(239, 68, 68)
     const intensity = (probability - 0.8) / 0.2;
-    return `rgba(239, 68, 68, ${0.7 + intensity * 0.3})`;
+    return `rgba(255, 80, 80, ${0.7 + intensity * 0.3})`;
   }
 }
 
-// Get text color for probability display
 function getProbabilityTextColor(probability: number): string {
   if (probability >= 0.6) {
-    return "rgba(255, 255, 255, 0.9)";
+    return "rgba(255, 255, 255, 0.95)";
   }
-  return "rgba(255, 255, 255, 0.7)";
+  return "rgba(200, 230, 255, 0.85)";
 }
 
 export function Grid({
@@ -91,100 +80,99 @@ export function Grid({
 
   return (
     <div className="perspective-container">
-      <div className="board-3d inline-block">
-        <div className="grid grid-cols-9 gap-0.5 mb-0.5">
-          <div className="w-7 h-7" />
-          {COLUMNS.map((col) => (
-            <div
-              key={col}
-              className="w-7 h-7 flex items-center justify-center text-[10px] font-bold text-primary uppercase"
-            >
-              {col}
+      <div className="grid-container">
+        <div className="board-3d inline-block">
+          {/* Column headers */}
+          <div className="grid grid-cols-9 gap-0.5 mb-1">
+            <div className="w-8 h-8" />
+            {COLUMNS.map((col) => (
+              <div
+                key={col}
+                className="w-8 h-8 flex items-center justify-center text-xs font-bold uppercase"
+                style={{
+                  color: "#00d4ff",
+                  textShadow: "0 0 5px rgba(0, 200, 255, 0.5)",
+                }}
+              >
+                {col}
+              </div>
+            ))}
+          </div>
+
+          {/* Grid rows */}
+          {Array.from({ length: 8 }).map((_, rowIndex) => (
+            <div key={rowIndex} className="grid grid-cols-9 gap-0.5 mb-0.5">
+              {/* Row header */}
+              <div
+                className="w-8 h-8 flex items-center justify-center text-xs font-bold"
+                style={{
+                  color: "#00d4ff",
+                  textShadow: "0 0 5px rgba(0, 200, 255, 0.5)",
+                }}
+              >
+                {rowIndex + 1}
+              </div>
+
+              {/* Cells */}
+              {Array.from({ length: 8 }).map((_, colIndex) => {
+                const status = getCellStatus(rowIndex, colIndex);
+                const ship = getShipAtCell(rowIndex, colIndex);
+                const hasShip = !!ship;
+                const probability = getProbability(rowIndex, colIndex);
+                const showProbability =
+                  showHeatmap && status === "empty" && probability > 0;
+
+                return (
+                  <div
+                    key={`${rowIndex}-${colIndex}`}
+                    className={cn(
+                      "w-8 h-8 relative cell-3d transition-all duration-200",
+                      status === "empty" &&
+                        !hasShip &&
+                        !showProbability &&
+                        "grid-cell",
+                      status === "empty" &&
+                        hasShip &&
+                        showShips &&
+                        "ship-cell cell-elevated",
+                      status === "hit" && "hit-marker cell-hit-3d",
+                      status === "miss" && "miss-marker cell-miss-3d",
+                      ship?.sunk && "opacity-40",
+                    )}
+                    style={{
+                      backgroundColor: showProbability
+                        ? getProbabilityColor(probability)
+                        : undefined,
+                      borderColor:
+                        showProbability && probability > 0.5
+                          ? "rgba(255, 200, 100, 0.5)"
+                          : undefined,
+                      boxShadow:
+                        showProbability && probability > 0.7
+                          ? `0 0 12px ${getProbabilityColor(probability)}, inset 0 0 6px rgba(255,255,255,0.2)`
+                          : undefined,
+                    }}
+                  >
+                    {/* Probability percentage */}
+                    {showProbability && probability > 0.1 && (
+                      <div
+                        className="absolute inset-0 flex items-center justify-center text-[9px] font-bold"
+                        style={{ color: getProbabilityTextColor(probability) }}
+                      >
+                        {Math.round(probability * 100)}
+                      </div>
+                    )}
+
+                    {/* Ship indicator when visible */}
+                    {status === "empty" && hasShip && showShips && (
+                      <div className="absolute inset-1 rounded-sm bg-gradient-to-br from-cyan-600/40 to-cyan-900/60 border border-cyan-400/30" />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
-
-        {Array.from({ length: 8 }).map((_, rowIndex) => (
-          <div key={rowIndex} className="grid grid-cols-9 gap-0.5 mb-0.5">
-            {/* Row header */}
-            <div className="w-7 h-7 flex items-center justify-center text-[10px] font-bold text-primary">
-              {rowIndex + 1}
-            </div>
-
-            {/* Cells */}
-            {Array.from({ length: 8 }).map((_, colIndex) => {
-              const status = getCellStatus(rowIndex, colIndex);
-              const ship = getShipAtCell(rowIndex, colIndex);
-              const hasShip = !!ship;
-              const probability = getProbability(rowIndex, colIndex);
-              const showProbability =
-                showHeatmap && status === "empty" && probability > 0;
-
-              return (
-                <div
-                  key={`${rowIndex}-${colIndex}`}
-                  className={cn(
-                    "w-7 h-7 border transition-all duration-200 relative cell-3d",
-                    status === "empty" &&
-                      !hasShip &&
-                      !showProbability &&
-                      "bg-card/30 border-primary/20",
-                    status === "empty" &&
-                      hasShip &&
-                      showShips &&
-                      "border-primary/40 cell-elevated",
-                    status === "hit" &&
-                      "bg-hit border-hit animate-pulse cell-hit-3d",
-                    status === "miss" &&
-                      "bg-miss border-miss/50 opacity-50 cell-miss-3d",
-                    ship?.sunk && "opacity-30",
-                  )}
-                  style={{
-                    backgroundColor: showProbability
-                      ? getProbabilityColor(probability)
-                      : status === "empty" && hasShip && showShips
-                        ? ship.color + "40"
-                        : undefined,
-                    borderColor: showProbability
-                      ? probability > 0.5
-                        ? "rgba(255, 255, 255, 0.3)"
-                        : "rgba(255, 255, 255, 0.1)"
-                      : status === "empty" && hasShip && showShips
-                        ? ship.color
-                        : undefined,
-                    boxShadow:
-                      showProbability && probability > 0.7
-                        ? `0 0 8px ${getProbabilityColor(probability)}, inset 0 0 4px rgba(255,255,255,0.2)`
-                        : status === "empty" && hasShip && showShips
-                          ? `0 0 8px ${ship.color}60, inset 0 0 8px ${ship.color}30, 0 4px 6px rgba(0,0,0,0.5)`
-                          : undefined,
-                  }}
-                >
-                  {/* Probability percentage */}
-                  {showProbability && probability > 0.1 && (
-                    <div
-                      className="absolute inset-0 flex items-center justify-center text-[8px] font-bold"
-                      style={{ color: getProbabilityTextColor(probability) }}
-                    >
-                      {Math.round(probability * 100)}
-                    </div>
-                  )}
-
-                  {status === "hit" && (
-                    <div className="w-full h-full flex items-center justify-center text-primary-foreground font-bold text-xs">
-                      ×
-                    </div>
-                  )}
-                  {status === "miss" && (
-                    <div className="w-full h-full flex items-center justify-center text-foreground/50 text-xs">
-                      ·
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
       </div>
     </div>
   );

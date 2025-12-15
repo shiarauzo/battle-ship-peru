@@ -4,7 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { Grid } from "@/components/grid";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Target, ArrowLeft, Flame } from "lucide-react";
+import {
+  Trophy,
+  Target,
+  ArrowLeft,
+  Flame,
+  Anchor,
+  Crosshair,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useClickSound } from "@/hooks/useClickSound";
 
@@ -36,7 +43,7 @@ const COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const generateShips = (): Ship[] => {
   const ships: Ship[] = [];
   const shipSizes = [5, 4, 3, 3, 2];
-  const colors = Array(5).fill("hsl(160, 50%, 40%)");
+  const colors = Array(5).fill("hsl(200, 70%, 35%)");
 
   const occupied = new Set<string>();
 
@@ -100,7 +107,6 @@ export function BattleField({
   const [isThinking, setIsThinking] = useState(false);
   const { playClick } = useClickSound();
 
-  // Heatmap state
   const [heatmap1, setHeatmap1] = useState<number[][] | undefined>(undefined);
   const [heatmap2, setHeatmap2] = useState<number[][] | undefined>(undefined);
   const [showHeatmap1, setShowHeatmap1] = useState(true);
@@ -133,7 +139,6 @@ export function BattleField({
     currentShots: Shot[],
     heatmap?: number[][],
   ): number => {
-    // Use heatmap probability if available
     if (heatmap && heatmap[row] && heatmap[row][col] !== undefined) {
       return Math.round(heatmap[row][col] * 100);
     }
@@ -154,7 +159,6 @@ export function BattleField({
   };
 
   const saveBattle = useCallback(async () => {
-    // Prepare moves data for learning
     const allMoves = [
       ...shots1.map((shot, idx) => ({
         model: aiModel1,
@@ -228,7 +232,6 @@ export function BattleField({
         let row = data.row;
         let col = data.col;
 
-        // Update heatmap for the current player
         if (data.heatmap) {
           if (currentPlayer === 1) {
             setHeatmap1(data.heatmap);
@@ -377,30 +380,30 @@ export function BattleField({
   const updatedShips2 = updateSunkShips(ships2, shots1);
 
   const renderShotLog = (shots: Shot[]) => (
-    <div className="h-[120px] w-full rounded border border-primary/30 p-2 bg-card/50 overflow-y-auto">
+    <div className="h-[120px] w-full rounded border border-cyan-700/40 p-2 bg-black/40 overflow-y-auto">
       <div className="space-y-1">
         {shots.length === 0 ? (
           <p className="text-center text-muted-foreground text-xs py-2">
-            ESPERANDO...
+            WAITING...
           </p>
         ) : (
           shots.slice(-10).map((shot, index) => (
             <div
               key={index}
-              className="flex items-center justify-between p-1.5 rounded bg-muted/30 text-xs"
+              className="flex items-center justify-between p-1.5 rounded bg-cyan-950/30 text-xs border border-cyan-900/30"
             >
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-muted-foreground">
+                <span className="text-[10px] font-mono text-cyan-500/70">
                   #{shots.length - 10 + index + 1}
                 </span>
                 <Badge
                   variant="outline"
-                  className="font-mono text-[10px] px-1 py-0"
+                  className="font-mono text-[10px] px-1.5 py-0 border-cyan-600/50 text-cyan-300"
                 >
                   {COLUMNS[shot.col]}
                   {shot.row + 1}
                 </Badge>
-                <span className="text-[9px] text-primary/80 font-mono">
+                <span className="text-[9px] text-cyan-400/80 font-mono">
                   {shot.confidence}%
                 </span>
               </div>
@@ -408,8 +411,8 @@ export function BattleField({
                 variant={shot.hit ? "default" : "secondary"}
                 className={
                   shot.hit
-                    ? "bg-hit text-[10px] px-1 py-0"
-                    : "bg-miss text-[10px] px-1 py-0"
+                    ? "bg-red-600 text-white text-[10px] px-1.5 py-0 border-red-500"
+                    : "bg-slate-700 text-slate-300 text-[10px] px-1.5 py-0 border-slate-600"
                 }
               >
                 {shot.hit ? "HIT" : "MISS"}
@@ -422,7 +425,7 @@ export function BattleField({
   );
 
   return (
-    <div className="min-h-screen p-8 monitor-frame">
+    <div className="min-h-screen p-8 monitor-frame hex-pattern">
       <div className="max-w-7xl mx-auto space-y-4">
         <div className="text-center space-y-1">
           {onBackToMenu && (
@@ -433,61 +436,62 @@ export function BattleField({
                   onBackToMenu();
                 }}
                 variant="outline"
-                size="sm"
-                className="border-green-600 text-green-400 hover:bg-green-950"
+                className="border-cyan-600 text-cyan-400 hover:bg-cyan-950 btn-primary"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Menu
               </Button>
             </div>
           )}
-          <h1 className="text-3xl md:text-4xl font-bold text-balance text-glow uppercase tracking-wider">
-            [ BATALLA NAVAL IA ]
+          <h1 className="text-3xl md:text-4xl font-bold text-balance text-glow uppercase tracking-wider flex items-center justify-center gap-3">
+            <Anchor className="h-8 w-8" />
+            [ NAVAL BATTLE AI ]
+            <Anchor className="h-8 w-8" />
           </h1>
-          <p className="text-muted-foreground text-sm uppercase tracking-wide">
-            Sistema de Combate Terminal v3.0 - Probabilistic AI + Q-Learning
+          <p className="text-cyan-400/70 text-sm uppercase tracking-wide">
+            Combat Terminal System v3.0 - Probabilistic AI + Q-Learning
           </p>
         </div>
 
         {gameOver && winner && (
-          <Card className="p-4 bg-primary/20 text-primary border-primary animate-pulse">
+          <Card className="p-4 bg-cyan-900/30 text-cyan-300 border-cyan-500 animate-pulse card-relief">
             <div className="flex items-center justify-center gap-3">
-              <Trophy className="h-6 w-6" />
+              <Trophy className="h-6 w-6 text-yellow-400" />
               <h2 className="text-xl font-bold text-glow uppercase">
-                &gt;&gt; {winner === 1 ? aiModel1 : aiModel2} VICTORIA &lt;&lt;
+                &gt;&gt; {winner === 1 ? aiModel1 : aiModel2} VICTORY &lt;&lt;
               </h2>
-              <Trophy className="h-6 w-6" />
+              <Trophy className="h-6 w-6 text-yellow-400" />
             </div>
           </Card>
         )}
 
         <div className="grid md:grid-cols-2 gap-4">
           {/* Player 1 Card */}
-          <Card className="p-4 space-y-3 bg-card/80 border-primary/30 grid-glow">
-            <div className="flex items-center justify-between border-b border-primary/30 pb-2">
+          <Card className="p-4 space-y-3 card-relief">
+            <div className="flex items-center justify-between border-b border-cyan-700/40 pb-2">
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2 text-glow uppercase">
-                  [{aiModel1}]
+                  <Crosshair className="h-4 w-4" />[{aiModel1}]
                   {currentPlayer === 1 && !gameOver && (
                     <Badge
                       variant="default"
-                      className="animate-pulse text-[10px] px-1 py-0"
+                      className="animate-pulse text-[10px] px-1.5 py-0 bg-cyan-600"
                     >
                       <Target className="h-2 w-2 mr-1" />
-                      {isThinking ? "PENSANDO..." : "ACTIVO"}
+                      {isThinking ? "THINKING..." : "ACTIVE"}
                     </Badge>
                   )}
                 </h2>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                  JUGADOR_01
+                <p className="text-[10px] text-cyan-500/70 uppercase tracking-wide">
+                  PLAYER_01
                 </p>
               </div>
               <div className="text-right">
                 <div className="text-xl font-bold text-glow">
                   {calculateAccuracy(shots1)}%
                 </div>
-                <div className="text-[9px] text-muted-foreground uppercase">
-                  PRECISION
+                <div className="text-[9px] text-cyan-500/70 uppercase">
+                  ACCURACY
                 </div>
               </div>
             </div>
@@ -503,15 +507,15 @@ export function BattleField({
                 size="sm"
                 className={`text-[10px] h-6 ${
                   showHeatmap1
-                    ? "bg-orange-600 hover:bg-orange-700"
+                    ? "bg-orange-600 hover:bg-orange-700 border-orange-500"
                     : "border-orange-600 text-orange-400 hover:bg-orange-950"
                 }`}
               >
                 <Flame className="h-3 w-3 mr-1" />
-                MAPA DE CALOR
+                HEATMAP
               </Button>
-              <div className="text-[9px] text-muted-foreground">
-                {heatmap1 ? "AI PROBABILISTICO" : "CARGANDO..."}
+              <div className="text-[9px] text-cyan-500/70">
+                {heatmap1 ? "PROBABILISTIC AI" : "LOADING..."}
               </div>
             </div>
 
@@ -524,26 +528,31 @@ export function BattleField({
                 showHeatmap={showHeatmap1}
               />
             </div>
-            <div className="space-y-2 border-t border-primary/30 pt-2">
+            <div className="space-y-2 border-t border-cyan-700/40 pt-2">
               <div className="grid grid-cols-2 gap-2 text-[10px]">
                 <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded bg-hit" />
-                  <span>
-                    IMPACTOS: {shots1.filter((s) => s.hit).length}/
+                  <div
+                    className="h-3 w-3 rounded bg-red-600 hit-marker"
+                    style={{ position: "relative" }}
+                  />
+                  <span className="text-cyan-300">
+                    HITS: {shots1.filter((s) => s.hit).length}/
                     {getTotalShipCells(ships2)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded bg-miss" />
-                  <span>FALLOS: {shots1.filter((s) => !s.hit).length}</span>
+                  <div className="h-3 w-3 rounded bg-slate-600" />
+                  <span className="text-cyan-300">
+                    MISSES: {shots1.filter((s) => !s.hit).length}
+                  </span>
                 </div>
               </div>
-              <div className="text-[10px] text-muted-foreground uppercase">
-                BARCOS HUNDIDOS: {updatedShips2.filter((s) => s.sunk).length}/5
+              <div className="text-[10px] text-cyan-500/70 uppercase">
+                SHIPS DESTROYED: {updatedShips2.filter((s) => s.sunk).length}/5
               </div>
               <div className="pt-1">
-                <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-primary">
-                  &gt; REGISTRO DE DISPAROS
+                <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-cyan-400">
+                  &gt; SHOT LOG
                 </h3>
                 {renderShotLog(shots1)}
               </div>
@@ -551,31 +560,31 @@ export function BattleField({
           </Card>
 
           {/* Player 2 Card */}
-          <Card className="p-4 space-y-3 bg-card/80 border-primary/30 grid-glow">
-            <div className="flex items-center justify-between border-b border-primary/30 pb-2">
+          <Card className="p-4 space-y-3 card-relief">
+            <div className="flex items-center justify-between border-b border-cyan-700/40 pb-2">
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2 text-glow uppercase">
-                  [{aiModel2}]
+                  <Crosshair className="h-4 w-4" />[{aiModel2}]
                   {currentPlayer === 2 && !gameOver && (
                     <Badge
                       variant="default"
-                      className="animate-pulse text-[10px] px-1 py-0"
+                      className="animate-pulse text-[10px] px-1.5 py-0 bg-cyan-600"
                     >
                       <Target className="h-2 w-2 mr-1" />
-                      {isThinking ? "PENSANDO..." : "ACTIVO"}
+                      {isThinking ? "THINKING..." : "ACTIVE"}
                     </Badge>
                   )}
                 </h2>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                  JUGADOR_02
+                <p className="text-[10px] text-cyan-500/70 uppercase tracking-wide">
+                  PLAYER_02
                 </p>
               </div>
               <div className="text-right">
                 <div className="text-xl font-bold text-glow">
                   {calculateAccuracy(shots2)}%
                 </div>
-                <div className="text-[9px] text-muted-foreground uppercase">
-                  PRECISION
+                <div className="text-[9px] text-cyan-500/70 uppercase">
+                  ACCURACY
                 </div>
               </div>
             </div>
@@ -591,15 +600,15 @@ export function BattleField({
                 size="sm"
                 className={`text-[10px] h-6 ${
                   showHeatmap2
-                    ? "bg-orange-600 hover:bg-orange-700"
+                    ? "bg-orange-600 hover:bg-orange-700 border-orange-500"
                     : "border-orange-600 text-orange-400 hover:bg-orange-950"
                 }`}
               >
                 <Flame className="h-3 w-3 mr-1" />
-                MAPA DE CALOR
+                HEATMAP
               </Button>
-              <div className="text-[9px] text-muted-foreground">
-                {heatmap2 ? "AI PROBABILISTICO" : "CARGANDO..."}
+              <div className="text-[9px] text-cyan-500/70">
+                {heatmap2 ? "PROBABILISTIC AI" : "LOADING..."}
               </div>
             </div>
 
@@ -612,26 +621,31 @@ export function BattleField({
                 showHeatmap={showHeatmap2}
               />
             </div>
-            <div className="space-y-2 border-t border-primary/30 pt-2">
+            <div className="space-y-2 border-t border-cyan-700/40 pt-2">
               <div className="grid grid-cols-2 gap-2 text-[10px]">
                 <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded bg-hit" />
-                  <span>
-                    IMPACTOS: {shots2.filter((s) => s.hit).length}/
+                  <div
+                    className="h-3 w-3 rounded bg-red-600 hit-marker"
+                    style={{ position: "relative" }}
+                  />
+                  <span className="text-cyan-300">
+                    HITS: {shots2.filter((s) => s.hit).length}/
                     {getTotalShipCells(ships1)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded bg-miss" />
-                  <span>FALLOS: {shots2.filter((s) => !s.hit).length}</span>
+                  <div className="h-3 w-3 rounded bg-slate-600" />
+                  <span className="text-cyan-300">
+                    MISSES: {shots2.filter((s) => !s.hit).length}
+                  </span>
                 </div>
               </div>
-              <div className="text-[10px] text-muted-foreground uppercase">
-                BARCOS HUNDIDOS: {updatedShips1.filter((s) => s.sunk).length}/5
+              <div className="text-[10px] text-cyan-500/70 uppercase">
+                SHIPS DESTROYED: {updatedShips1.filter((s) => s.sunk).length}/5
               </div>
               <div className="pt-1">
-                <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-primary">
-                  &gt; REGISTRO DE DISPAROS
+                <h3 className="text-[10px] font-semibold mb-1 uppercase tracking-wide text-cyan-400">
+                  &gt; SHOT LOG
                 </h3>
                 {renderShotLog(shots2)}
               </div>
@@ -640,45 +654,45 @@ export function BattleField({
         </div>
 
         {/* Heatmap Legend */}
-        <Card className="p-3 bg-card/60 border-primary/20">
+        <Card className="p-3 card-relief">
           <div className="flex items-center justify-center gap-4 text-[10px]">
-            <span className="text-muted-foreground uppercase font-semibold">
-              Leyenda Mapa de Calor:
+            <span className="text-cyan-400 uppercase font-semibold">
+              Heatmap Legend:
             </span>
             <div className="flex items-center gap-1">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(59, 130, 246, 0.5)" }}
+                style={{ backgroundColor: "rgba(0, 100, 180, 0.5)" }}
               />
-              <span>0-20%</span>
+              <span className="text-cyan-300">0-20%</span>
             </div>
             <div className="flex items-center gap-1">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(6, 182, 212, 0.5)" }}
+                style={{ backgroundColor: "rgba(0, 150, 200, 0.5)" }}
               />
-              <span>20-40%</span>
+              <span className="text-cyan-300">20-40%</span>
             </div>
             <div className="flex items-center gap-1">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(234, 179, 8, 0.6)" }}
+                style={{ backgroundColor: "rgba(0, 200, 220, 0.6)" }}
               />
-              <span>40-60%</span>
+              <span className="text-cyan-300">40-60%</span>
             </div>
             <div className="flex items-center gap-1">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(249, 115, 22, 0.7)" }}
+                style={{ backgroundColor: "rgba(255, 150, 50, 0.7)" }}
               />
-              <span>60-80%</span>
+              <span className="text-cyan-300">60-80%</span>
             </div>
             <div className="flex items-center gap-1">
               <div
                 className="w-4 h-4 rounded"
-                style={{ backgroundColor: "rgba(239, 68, 68, 0.9)" }}
+                style={{ backgroundColor: "rgba(255, 80, 80, 0.9)" }}
               />
-              <span>80-100%</span>
+              <span className="text-cyan-300">80-100%</span>
             </div>
           </div>
         </Card>
