@@ -71,6 +71,12 @@ Open [http://localhost:3000](http://localhost:3000) and let the battles begin!
 
 ---
 
+## Screenshots
+
+![Battleship AI Interface](./public/modelo_inicial.png)
+
+---
+
 <p align="center">
   <br>
   made with &#10084; by <strong>shiara arauzo</strong>
