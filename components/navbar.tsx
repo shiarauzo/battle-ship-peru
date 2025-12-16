@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export function Navbar() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
         <div className="mr-4 hidden md:flex">
           <Link className="mr-6 flex items-center space-x-2" href="/">
@@ -21,7 +21,7 @@ export function Navbar() {
               href="/"
               className={cn(
                 "transition-colors hover:text-foreground/80",
-                pathname === "/" ? "text-foreground" : "text-foreground/60"
+                pathname === "/" ? "text-foreground" : "text-foreground/60",
               )}
             >
               Game
@@ -30,7 +30,9 @@ export function Navbar() {
               href="/ranking"
               className={cn(
                 "transition-colors hover:text-foreground/80",
-                pathname === "/ranking" ? "text-foreground" : "text-foreground/60"
+                pathname === "/ranking"
+                  ? "text-foreground"
+                  : "text-foreground/60",
               )}
             >
               Ranking
@@ -39,5 +41,5 @@ export function Navbar() {
         </div>
       </div>
     </nav>
-  )
+  );
 }
