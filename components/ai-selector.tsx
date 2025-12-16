@@ -14,7 +14,6 @@ import { Anchor, Crosshair, Shuffle, BarChart3 } from "lucide-react";
 import { useClickSound } from "@/hooks/useClickSound";
 
 const AI_MODELS = [
-  { id: "human", name: "Human", provider: "You" },
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "OpenAI" },
   {
     id: "anthropic/claude-sonnet-4",
@@ -56,9 +55,7 @@ export function AISelector({ onStart, onRanking }: AISelectorProps) {
     }
   };
   const handleRandom = () => {
-    // Exclude human from random selection
-    const aiOnly = AI_MODELS.filter((m) => m.id !== "human");
-    const shuffled = [...aiOnly].sort(() => Math.random() - 0.5);
+    const shuffled = [...AI_MODELS].sort(() => Math.random() - 0.5);
     setModel1(shuffled[0].id);
     setModel2(shuffled[1].id);
     playClick();
@@ -157,17 +154,6 @@ export function AISelector({ onStart, onRanking }: AISelectorProps) {
             >
               <Shuffle className="h-4 w-4 mr-2" />
               Random Models
-            </Button>
-
-            <Button
-              onClick={() => {
-                playClick();
-                onRanking();
-              }}
-              variant="outline"
-              className="w-full h-10 font-bold uppercase tracking-wider border-cyan-600 text-cyan-400 hover:bg-cyan-950 hover:text-cyan-300"
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />[ Rankings ]
             </Button>
           </div>
         </div>
